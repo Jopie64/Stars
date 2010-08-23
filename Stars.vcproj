@@ -45,6 +45,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="..\Boost"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -125,6 +126,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="..\Boost"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG"
 				MinimalRebuild="false"
 				RuntimeLibrary="2"
@@ -217,6 +219,18 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<Filter
+				Name="JStd"
+				>
+				<File
+					RelativePath=".\jstd\JStd.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\jstd\Threading.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -247,6 +261,18 @@
 				RelativePath=".\targetver.h"
 				>
 			</File>
+			<Filter
+				Name="JStd"
+				>
+				<File
+					RelativePath=".\jstd\JStd.h"
+					>
+				</File>
+				<File
+					RelativePath=".\jstd\Threading.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"
