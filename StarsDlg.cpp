@@ -48,6 +48,8 @@ BOOL CStarsDlg::OnInitDialog()
 
 	m_StarsWnd.Create(NULL, L"Stars", WS_VISIBLE|WS_CHILD, CRect(0,0,0,0), this, 0x00, NULL);
 
+	RelocateControls();
+
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -95,6 +97,12 @@ void CStarsDlg::OnSize(UINT nType, int cx, int cy)
 	if(m_StarsWnd.m_hWnd == NULL)
 		return;
 
+	RelocateControls();
+
+}
+
+void CStarsDlg::RelocateControls()
+{
 	CRect W_Rect_Client;
 	GetClientRect(W_Rect_Client);
 	//W_Rect_Client.DeflateRect(10,10);
