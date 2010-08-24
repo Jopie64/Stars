@@ -15,7 +15,6 @@ const double G_RandomInitAllVelocity = 2;
 const double G_RandomInitSingleVelocity = 0.1;
 const double G_DownwardGravitation = 0.001;
 const int G_PullerMass = 2;
-const int G_NbPrevLoc = 10;
 
 CPoint CFPoint::ToScreen(const CPoint& P_pt_Center)const
 {
@@ -32,13 +31,13 @@ CFPoint CFPoint::ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen)
 CStar::CStar()
 :	m_iIxCur(0)
 {
-	m_vPos.resize(G_NbPrevLoc);
+	//m_vPos.resize(G_NbPrevLoc);
 }
 
 void CStar::Pos(const CFPoint& P_Pos)
 {
 	++m_iIxCur;
-	if(m_iIxCur == m_vPos.size())
+	if(m_iIxCur == G_NbPrevLoc)
 		m_iIxCur = 0;
 	m_vPos[m_iIxCur] = P_Pos;
 }
@@ -77,13 +76,13 @@ int CStarsWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
-	m_vStar.resize(G_NbStars);
+	m_vStarShared.resize(G_NbStars);
 
-	RandomInit();
+	//RandomInit();
 
 	Start();
 
-	SetTimer(eT_Invalidate, 5, NULL);
+	//SetTimer(eT_Invalidate, 40, NULL);
 
 	return 0;
 }
@@ -101,12 +100,11 @@ void CStarsWnd::RandomInit(CStar& P_Star, double P_Velocity)
 }
 
 
-void CStarsWnd::RandomInit()
+void CStarsWnd::RandomInit(CvStar& P_vStar, double P_Velocity)
 {
-	double velocity = G_RandomInitAllVelocity;
-	for(CvStar::iterator i = m_vStar.begin(); i != m_vStar.end(); ++i)
+	for(CvStar::iterator i = P_vStar.begin(); i != P_vStar.end(); ++i)
 	{
-		RandomInit(*i, velocity);
+		RandomInit(*i, P_Velocity);
 	}
 }
 
@@ -126,9 +124,11 @@ void CStarsWnd::OnPaint()
 {
 	CPaintDC dc(this);
 
-	CScopeLock lock(m_Cs);
-
-	SetPullerPos();
+	{
+		CScopeLock lock(m_Cs);
+		SetPullerPos();
+		m_vStarMain.swap(m_vStarShared);
+	}
 	CRect W_Rect_Client;
 	GetClientRect(W_Rect_Client);
 
@@ -148,7 +148,7 @@ void CStarsWnd::OnPaint()
 	//Hier tekeken
 	W_Dc.FillSolidRect(&W_Rect_Client, RGB(0,0,0));
 
-	DrawStars(W_Dc);
+	DrawStars(W_Dc, m_vStarMain);
 
 	CRect W_Rect_Puller(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), CSize(4,4));
 	W_Dc.FillSolidRect(W_Rect_Puller, RGB(255,0,0));
@@ -162,20 +162,20 @@ void CStarsWnd::OnPaint()
 	W_Dc.SelectObject(W_OldBmPtr);
 }
 
-void CStarsWnd::DrawStars(CDC& P_Dc)
+void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
 {
 	CRect W_Rect_Client;
 	GetClientRect(W_Rect_Client);
 
 	CPoint W_pt_Center = W_Rect_Client.CenterPoint();
 
-	for(CvStar::iterator i = m_vStar.begin(); i != m_vStar.end(); ++i)
+	for(CvStar::iterator i = P_vStar.begin(); i != P_vStar.end(); ++i)
 	{
 		CPoint W_pt(i->Pos().ToScreen(W_pt_Center));
 		if(!W_Rect_Client.PtInRect(W_pt))
 		{
-			*i = CStar();
-			RandomInit(*i, G_RandomInitSingleVelocity);
+			//*i = CStar();
+			//RandomInit(*i, G_RandomInitSingleVelocity);
 			continue;
 		}
 		P_Dc.FillSolidRect(CRect(W_pt, CSize(1,1)), RGB(255,255,255));
@@ -193,20 +193,29 @@ void CStarsWnd::Start()
 
 void CStarsWnd::Stop()
 {
-	m_bStop = true;
+	m_StarMoveTd.PostQuitMessage();
 	while(!m_bStopped)
 		Sleep(20);
 }
 
 void CStarsWnd::AsyncRun()
 {
+	m_StarMoveTd.Register();
 	int count = 0;
-	while(!m_bStop)
+	CvStar W_vStarTemp;
+	W_vStarTemp.resize(G_NbStars);
+	RandomInit(W_vStarTemp, G_RandomInitAllVelocity);
+
+	CStar W_Puller;
+	W_Puller.Pos(CFPoint(10,10));
+	while(!m_StarMoveTd.CallMessages())
 	{
-		if(count++ % 4 == 0)
-			Sleep(1);
-		CScopeLock lock(m_Cs);
-		for(CvStar::iterator i = m_vStar.begin(); i != m_vStar.end(); ++i)
+		//if(count++ % 3 == 0)
+		//	Sleep(1);
+
+
+		for(int bla=0; bla<4; ++bla)
+		for(CvStar::iterator i = W_vStarTemp.begin(); i != W_vStarTemp.end(); ++i)
 		{
 //			if(i->m_x == 0 && i->m_y == 0)
 //				int i=0;
@@ -214,8 +223,8 @@ void CStarsWnd::AsyncRun()
 			CFPoint W_Pos = i->Pos();
 			W_Velocity.m_y -= G_DownwardGravitation;
 
-			double xoff = W_Pos.m_x - m_Puller.Pos().m_x;
-			double yoff = W_Pos.m_y - m_Puller.Pos().m_y;
+			double xoff = W_Pos.m_x - W_Puller.Pos().m_x;
+			double yoff = W_Pos.m_y - W_Puller.Pos().m_y;
 			double distSqr = xoff * xoff + yoff * yoff;
 			double dist = sqrt(distSqr);
 			double force = G_PullerMass / distSqr;
@@ -231,6 +240,12 @@ void CStarsWnd::AsyncRun()
 
 			i->Velocity(W_Velocity);
 			i->Pos(W_Pos);
+		}
+		{
+			CScopeLock lock(m_Cs);
+			m_vStarShared = W_vStarTemp;
+			W_Puller = m_Puller;
+			Invalidate(FALSE);
 		}
 	}
 	
@@ -249,8 +264,12 @@ void CStarsWnd::OnTimer(UINT_PTR nIDEvent)
 
 void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 {
-	CScopeLock lock(m_Cs);
 	CWnd::OnSize(nType, cx, cy);
-	SetPullerPos();
-	RandomInit();
+	{
+		CScopeLock lock(m_Cs);
+		SetPullerPos();
+	}
+	Stop();
+	Start();
+	//RandomInit();
 }

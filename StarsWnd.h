@@ -3,6 +3,8 @@
 #include <vector>
 #include "JStd/Threading.h"
 
+const int G_NbPrevLoc = 10;
+
 // CStarsWnd
 class CFPoint
 {
@@ -30,7 +32,8 @@ public:
 	void Velocity(const CFPoint& P_Velocity){m_Velocity = P_Velocity;}
 
 
-	CvPoint m_vPos;
+	//CvPoint m_vPos;
+	CFPoint m_vPos[G_NbPrevLoc];
 	int		m_iIxCur;
 	CFPoint m_Velocity;
 };
@@ -56,9 +59,9 @@ public:
 	afx_msg void OnPaint();
 
 	void		SetPullerPos();
-	void		DrawStars(CDC& P_Dc);
+	void		DrawStars(CDC& P_Dc, CvStar& P_vStar);
 
-	void		RandomInit();
+	void		RandomInit(CvStar& P_vStars, double P_Velocity);
 	void		RandomInit(CStar& P_Star, double P_Velocity);
 
 	void		Start();
@@ -78,7 +81,10 @@ private:
 
 //Star
 	CStar	m_Puller;
-	CvStar	m_vStar;
+	CvStar	m_vStarShared;
+	CvStar	m_vStarMain;
+
+	Threading::CMsgThread m_StarMoveTd;
 
 
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
