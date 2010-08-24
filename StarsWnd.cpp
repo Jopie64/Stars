@@ -10,7 +10,7 @@
 
 using namespace Threading;
 
-const int G_NbStars = 50000;
+const int G_NbStars = 5000;
 const double G_RandomInitAllVelocity = 2;
 const double G_RandomInitSingleVelocity = 0.1;
 const double G_DownwardGravitation = 0.001;
@@ -29,16 +29,23 @@ CFPoint CFPoint::ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen)
 }
 
 CStar::CStar()
-:	m_iIxCur(0)
+:	m_iIxCur(0),
+	m_iPosSkip(0)
 {
 	//m_vPos.resize(G_NbPrevLoc);
 }
 
 void CStar::Pos(const CFPoint& P_Pos)
 {
-	++m_iIxCur;
-	if(m_iIxCur == G_NbPrevLoc)
-		m_iIxCur = 0;
+	if(m_iPosSkip <= 0)
+	{
+		m_iPosSkip = G_NbPrevLoc_Skip;
+		++m_iIxCur;
+		if(m_iIxCur == G_NbPrevLoc)
+			m_iIxCur = 0;
+	}
+	else
+		--m_iPosSkip;
 	m_vPos[m_iIxCur] = P_Pos;
 }
 
@@ -49,7 +56,8 @@ IMPLEMENT_DYNAMIC(CStarsWnd, CWnd)
 CStarsWnd::CStarsWnd()
 :	m_Rect_Bm(0,0,0,0),
 	m_bStopped(true),
-	m_bStop(false)
+	m_bStop(false),
+	m_bDoRandomInit(false)
 {
 
 }
@@ -65,6 +73,8 @@ BEGIN_MESSAGE_MAP(CStarsWnd, CWnd)
 	ON_WM_CREATE()
 	ON_WM_TIMER()
 	ON_WM_SIZE()
+	ON_WM_DESTROY()
+	ON_WM_KEYDOWN()
 END_MESSAGE_MAP()
 
 
@@ -162,6 +172,12 @@ void CStarsWnd::OnPaint()
 	W_Dc.SelectObject(W_OldBmPtr);
 }
 
+void PutPixel(CDC& P_Dc, const CPoint& P_Pt)
+{
+	//P_Dc.SetPixel(P_Pt, RGB(255,255,255));
+	P_Dc.FillSolidRect(CRect(P_Pt, CSize(1,1)), RGB(255,255,255));
+}
+
 void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
 {
 	CRect W_Rect_Client;
@@ -176,9 +192,17 @@ void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
 		{
 			//*i = CStar();
 			//RandomInit(*i, G_RandomInitSingleVelocity);
+			ResetStar(i - P_vStar.begin());
 			continue;
 		}
-		P_Dc.FillSolidRect(CRect(W_pt, CSize(1,1)), RGB(255,255,255));
+		//P_Dc.SetPixel(W_pt, RGB(255,255,255));
+		//P_Dc.FillSolidRect(CRect(W_pt, CSize(1,1)), RGB(255,255,255));
+		for(int W_iX = i->m_iIxCur + 1; W_iX != i->m_iIxCur; ++W_iX >= G_NbPrevLoc ? W_iX = 0 : W_iX = W_iX)
+		{
+			//if(W_iX >= G_NbPrevLoc)
+			//	W_iX = 0;
+			PutPixel(P_Dc, i->m_vPos[W_iX].ToScreen(W_pt_Center));
+		}
 	}
 }
 
@@ -202,9 +226,9 @@ void CStarsWnd::AsyncRun()
 {
 	m_StarMoveTd.Register();
 	int count = 0;
-	CvStar W_vStarTemp;
-	W_vStarTemp.resize(G_NbStars);
-	RandomInit(W_vStarTemp, G_RandomInitAllVelocity);
+	m_vStarWork.clear();
+	m_vStarWork.resize(G_NbStars);
+	RandomInit(m_vStarWork, G_RandomInitAllVelocity);
 
 	CStar W_Puller;
 	W_Puller.Pos(CFPoint(10,10));
@@ -212,10 +236,17 @@ void CStarsWnd::AsyncRun()
 	{
 		//if(count++ % 3 == 0)
 		//	Sleep(1);
+		if(m_bDoRandomInit)
+		{
+			m_bDoRandomInit = false;
+			m_vStarWork.clear();
+			m_vStarWork.resize(G_NbStars);
+			RandomInit(m_vStarWork, G_RandomInitAllVelocity);
+		}
 
 
 		for(int bla=0; bla<4; ++bla)
-		for(CvStar::iterator i = W_vStarTemp.begin(); i != W_vStarTemp.end(); ++i)
+		for(CvStar::iterator i = m_vStarWork.begin(); i != m_vStarWork.end(); ++i)
 		{
 //			if(i->m_x == 0 && i->m_y == 0)
 //				int i=0;
@@ -243,7 +274,7 @@ void CStarsWnd::AsyncRun()
 		}
 		{
 			CScopeLock lock(m_Cs);
-			m_vStarShared = W_vStarTemp;
+			m_vStarShared = m_vStarWork;
 			W_Puller = m_Puller;
 			Invalidate(FALSE);
 		}
@@ -272,4 +303,37 @@ void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 	Stop();
 	Start();
 	//RandomInit();
+}
+
+void CStarsWnd::OnDestroy()
+{
+	CWnd::OnDestroy();
+
+	Stop();
+}
+
+void CStarsWnd::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	bool W_bHandled = true;
+	switch(nChar)
+	{
+	case 'X': m_bDoRandomInit = true; break;
+
+	default:
+		W_bHandled = false;
+	}
+	if(!W_bHandled)
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+}
+
+void CStarsWnd::ResetStar(int P_iIx)
+{
+	if(!m_StarMoveTd.IsThisThread())
+	{
+		m_StarMoveTd.PostCallback(simplebind(&CStarsWnd::ResetStar, this, P_iIx));
+		return;
+	}
+	m_vStarWork[P_iIx].Pos(CFPoint(0,0));
+	m_vStarWork[P_iIx].Velocity(CFPoint(0,0.2 + 0.5 * RandF()));
+
 }

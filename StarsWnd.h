@@ -4,6 +4,7 @@
 #include "JStd/Threading.h"
 
 const int G_NbPrevLoc = 10;
+const int G_NbPrevLoc_Skip = 3;
 
 // CStarsWnd
 class CFPoint
@@ -35,6 +36,7 @@ public:
 	//CvPoint m_vPos;
 	CFPoint m_vPos[G_NbPrevLoc];
 	int		m_iIxCur;
+	int		m_iPosSkip;
 	CFPoint m_Velocity;
 };
 
@@ -77,12 +79,16 @@ private:
 
 	Threading::CCritSect m_Cs;
 
+	bool	m_bDoRandomInit;
+
+	void	ResetStar(int P_iIx);
 
 
 //Star
 	CStar	m_Puller;
 	CvStar	m_vStarShared;
 	CvStar	m_vStarMain;
+	CvStar	m_vStarWork;
 
 	Threading::CMsgThread m_StarMoveTd;
 
@@ -91,6 +97,8 @@ private:
 public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnDestroy();
+	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 };
 
 

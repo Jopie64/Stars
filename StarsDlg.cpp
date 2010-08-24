@@ -47,6 +47,7 @@ BOOL CStarsDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	m_StarsWnd.Create(NULL, L"Stars", WS_VISIBLE|WS_CHILD, CRect(0,0,0,0), this, 0x00, NULL);
+	m_StarsWnd.SetFocus();
 
 	RelocateControls();
 
