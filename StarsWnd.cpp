@@ -10,11 +10,14 @@
 
 using namespace Threading;
 
+const double G_Precision = 0.01;
 const int G_NbStars = 5000;
-const double G_RandomInitAllVelocity = 2;
-const double G_RandomInitSingleVelocity = 0.1;
-const double G_DownwardGravitation = 0.001;
-const int G_PullerMass = 2;
+const double G_RandomInitAllVelocity = 2 * G_Precision;
+const double G_RandomInitSingleVelocity = 0.1 * G_Precision;
+const double G_DownwardGravitation = 0.00005 * G_Precision;
+const double G_PullerMass = 2 * G_Precision;
+const double G_ResetY_Fixed = 3 * G_Precision;
+const double G_ResetY_Random = 0.01 * G_Precision;
 
 CPoint CFPoint::ToScreen(const CPoint& P_pt_Center)const
 {
@@ -172,10 +175,10 @@ void CStarsWnd::OnPaint()
 	W_Dc.SelectObject(W_OldBmPtr);
 }
 
-void PutPixel(CDC& P_Dc, const CPoint& P_Pt)
+void PutPixel(CDC& P_Dc, const CPoint& P_Pt, unsigned char P_cBrightness)
 {
 	//P_Dc.SetPixel(P_Pt, RGB(255,255,255));
-	P_Dc.FillSolidRect(CRect(P_Pt, CSize(1,1)), RGB(255,255,255));
+	P_Dc.FillSolidRect(CRect(P_Pt, CSize(1,1)), RGB(P_cBrightness,P_cBrightness,P_cBrightness));
 }
 
 void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
@@ -197,11 +200,13 @@ void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
 		}
 		//P_Dc.SetPixel(W_pt, RGB(255,255,255));
 		//P_Dc.FillSolidRect(CRect(W_pt, CSize(1,1)), RGB(255,255,255));
-		for(int W_iX = i->m_iIxCur + 1; W_iX != i->m_iIxCur; ++W_iX >= G_NbPrevLoc ? W_iX = 0 : W_iX = W_iX)
+		int bright = 255 - G_NbPrevLoc * 10;
+		for(int ix = i->m_iIxCur + 1; ix != i->m_iIxCur; ++ix >= G_NbPrevLoc ? ix = 0 : ix = ix)
 		{
+			bright += 10;
 			//if(W_iX >= G_NbPrevLoc)
 			//	W_iX = 0;
-			PutPixel(P_Dc, i->m_vPos[W_iX].ToScreen(W_pt_Center));
+			PutPixel(P_Dc, i->m_vPos[ix].ToScreen(W_pt_Center),bright);
 		}
 	}
 }
@@ -334,6 +339,6 @@ void CStarsWnd::ResetStar(int P_iIx)
 		return;
 	}
 	m_vStarWork[P_iIx].Pos(CFPoint(0,0));
-	m_vStarWork[P_iIx].Velocity(CFPoint(0,0.2 + 0.5 * RandF()));
+	m_vStarWork[P_iIx].Velocity(CFPoint(0,G_ResetY_Fixed + G_ResetY_Random * RandF()));
 
 }
