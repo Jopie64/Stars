@@ -8,11 +8,14 @@
 #include "boost/bind.hpp"
 #include <cmath>
 
+using namespace Threading;
+
 const int G_NbStars = 50000;
 const double G_RandomInitAllVelocity = 2;
 const double G_RandomInitSingleVelocity = 0.1;
 const double G_DownwardGravitation = 0.001;
 const int G_PullerMass = 2;
+const int G_NbPrevLoc = 10;
 
 CPoint CFPoint::ToScreen(const CPoint& P_pt_Center)const
 {
@@ -24,6 +27,20 @@ CFPoint CFPoint::ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen)
 {
 	return CFPoint( P_pt_Screen.x - P_pt_Center.x,
 					P_pt_Center.y - P_pt_Screen.y);
+}
+
+CStar::CStar()
+:	m_iIxCur(0)
+{
+	m_vPos.resize(G_NbPrevLoc);
+}
+
+void CStar::Pos(const CFPoint& P_Pos)
+{
+	++m_iIxCur;
+	if(m_iIxCur == m_vPos.size())
+		m_iIxCur = 0;
+	m_vPos[m_iIxCur] = P_Pos;
 }
 
 // CStarsWnd
@@ -109,6 +126,7 @@ void CStarsWnd::OnPaint()
 {
 	CPaintDC dc(this);
 
+	CScopeLock lock(m_Cs);
 
 	SetPullerPos();
 	CRect W_Rect_Client;
@@ -182,8 +200,12 @@ void CStarsWnd::Stop()
 
 void CStarsWnd::AsyncRun()
 {
+	int count = 0;
 	while(!m_bStop)
 	{
+		if(count++ % 4 == 0)
+			Sleep(1);
+		CScopeLock lock(m_Cs);
 		for(CvStar::iterator i = m_vStar.begin(); i != m_vStar.end(); ++i)
 		{
 //			if(i->m_x == 0 && i->m_y == 0)
@@ -227,6 +249,7 @@ void CStarsWnd::OnTimer(UINT_PTR nIDEvent)
 
 void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 {
+	CScopeLock lock(m_Cs);
 	CWnd::OnSize(nType, cx, cy);
 	SetPullerPos();
 	RandomInit();

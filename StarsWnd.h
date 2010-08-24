@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "JStd/Threading.h"
 
 // CStarsWnd
 class CFPoint
@@ -19,16 +20,18 @@ public:
 class CStar
 {
 public:
-	CStar(){}
+	typedef std::vector<CFPoint> CvPoint;
+	CStar();
 
-	const CFPoint& Pos()const{return m_Pos;}
+	const CFPoint& Pos()const{return m_vPos[m_iIxCur];}
 	const CFPoint& Velocity()const{return m_Velocity;}
 	
-	void Pos(const CFPoint& P_Pos){m_Pos = P_Pos;}
+	void Pos(const CFPoint& P_Pos);
 	void Velocity(const CFPoint& P_Velocity){m_Velocity = P_Velocity;}
 
 
-	CFPoint m_Pos;
+	CvPoint m_vPos;
+	int		m_iIxCur;
 	CFPoint m_Velocity;
 };
 
@@ -68,6 +71,8 @@ private:
 
 	bool	m_bStop;
 	bool	m_bStopped;
+
+	Threading::CCritSect m_Cs;
 
 
 
