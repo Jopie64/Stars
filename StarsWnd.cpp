@@ -9,20 +9,21 @@
 #include <cmath>
 
 const int G_NbStars = 50000;
-const int G_RandomInitAllVelocity = 2;
-const int G_RandomInitSingleVelocity = 0.1;
-const int G_DownwardGravitation = 0.001;
+const double G_RandomInitAllVelocity = 2;
+const double G_RandomInitSingleVelocity = 0.1;
+const double G_DownwardGravitation = 0.001;
 const int G_PullerMass = 2;
 
-CPoint CStar::ToScreen(const CPoint& P_pt_Center)
+CPoint CFPoint::ToScreen(const CPoint& P_pt_Center)const
 {
-	return CPoint((int)m_x + P_pt_Center.x, P_pt_Center.y - (int)m_y);
+	return CPoint((int)m_x + P_pt_Center.x, 
+		          P_pt_Center.y - (int)m_y);
 }
 
-void CStar::ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen)
+CFPoint CFPoint::ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen)
 {
-	m_x = P_pt_Screen.x - P_pt_Center.x;
-	m_y = P_pt_Center.y - P_pt_Screen.y;
+	return CFPoint( P_pt_Screen.x - P_pt_Center.x,
+					P_pt_Center.y - P_pt_Screen.y);
 }
 
 // CStarsWnd
@@ -78,8 +79,8 @@ double RandF()
 
 void CStarsWnd::RandomInit(CStar& P_Star, double P_Velocity)
 {
-	P_Star.m_vx = P_Velocity * (RandF() - 0.5);
-	P_Star.m_vy = P_Velocity * (RandF() - 0.5);
+	P_Star.Velocity(CFPoint(P_Velocity * (RandF() - 0.5), 
+		                    P_Velocity * (RandF() - 0.5)));
 }
 
 
@@ -100,7 +101,7 @@ void CStarsWnd::SetPullerPos()
 
 	CRect W_Rect_Client;
 	GetClientRect(W_Rect_Client);
-	m_Puller.ToStar(W_Rect_Client.CenterPoint(), W_pt_Mouse);
+	m_Puller.Pos(CFPoint::ToStar(W_Rect_Client.CenterPoint(), W_pt_Mouse));
 }
 
 
@@ -131,7 +132,7 @@ void CStarsWnd::OnPaint()
 
 	DrawStars(W_Dc);
 
-	CRect W_Rect_Puller(m_Puller.ToScreen(W_Rect_Client.CenterPoint()), CSize(4,4));
+	CRect W_Rect_Puller(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), CSize(4,4));
 	W_Dc.FillSolidRect(W_Rect_Puller, RGB(255,0,0));
 
 
@@ -152,7 +153,7 @@ void CStarsWnd::DrawStars(CDC& P_Dc)
 
 	for(CvStar::iterator i = m_vStar.begin(); i != m_vStar.end(); ++i)
 	{
-		CPoint W_pt(i->ToScreen(W_pt_Center));
+		CPoint W_pt(i->Pos().ToScreen(W_pt_Center));
 		if(!W_Rect_Client.PtInRect(W_pt))
 		{
 			*i = CStar();
@@ -187,22 +188,27 @@ void CStarsWnd::AsyncRun()
 		{
 //			if(i->m_x == 0 && i->m_y == 0)
 //				int i=0;
-			i->m_vy -= G_DownwardGravitation;
+			CFPoint W_Velocity = i->Velocity();
+			CFPoint W_Pos = i->Pos();
+			W_Velocity.m_y -= G_DownwardGravitation;
 
-			double xoff = i->m_x - m_Puller.m_x;
-			double yoff = i->m_y - m_Puller.m_y;
+			double xoff = W_Pos.m_x - m_Puller.Pos().m_x;
+			double yoff = W_Pos.m_y - m_Puller.Pos().m_y;
 			double distSqr = xoff * xoff + yoff * yoff;
 			double dist = sqrt(distSqr);
 			double force = G_PullerMass / distSqr;
 			double factor = force / dist;
 
 
-			i->m_vx -= xoff * factor;
-			i->m_vy -= yoff * factor;
+			W_Velocity.m_x -= xoff * factor;
+			W_Velocity.m_y -= yoff * factor;
 
 
-			i->m_x += i->m_vx;
-			i->m_y += i->m_vy;
+			W_Pos.m_x += W_Velocity.m_x;
+			W_Pos.m_y += W_Velocity.m_y;
+
+			i->Velocity(W_Velocity);
+			i->Pos(W_Pos);
 		}
 	}
 	

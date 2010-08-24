@@ -3,19 +3,33 @@
 #include <vector>
 
 // CStarsWnd
-class CStar
+class CFPoint
 {
 public:
-	CStar():m_x(0), m_y(0), m_vx(0), m_vy(0){}
+	CFPoint():m_x(0), m_y(0){}
+	CFPoint(double P_x, double P_y):m_x(P_x), m_y(P_y){}
 
-	CPoint  ToScreen(const CPoint& P_pt_Center);
-	void	ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen);
+	CPoint			ToScreen(const CPoint& P_pt_Center)const;
+	static CFPoint	ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen);
 
 	double m_x;
 	double m_y;
+};
 
-	double m_vx;
-	double m_vy;
+class CStar
+{
+public:
+	CStar(){}
+
+	const CFPoint& Pos()const{return m_Pos;}
+	const CFPoint& Velocity()const{return m_Velocity;}
+	
+	void Pos(const CFPoint& P_Pos){m_Pos = P_Pos;}
+	void Velocity(const CFPoint& P_Velocity){m_Velocity = P_Velocity;}
+
+
+	CFPoint m_Pos;
+	CFPoint m_Velocity;
 };
 
 typedef std::vector<CStar> CvStar;
