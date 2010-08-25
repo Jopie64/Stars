@@ -4,7 +4,7 @@
 #include "JStd/Threading.h"
 
 const int G_NbPrevLoc = 10;
-const int G_NbPrevLoc_Skip = 80;
+const int G_NbPrevLoc_Skip = 100;
 
 // CStarsWnd
 class CFPoint

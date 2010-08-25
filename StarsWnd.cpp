@@ -255,7 +255,7 @@ void CStarsWnd::RenderStar(CStar& P_Star)
 //	glTranslated(P_Star.Pos().m_x, P_Star.Pos().m_y, 0);
 
 
-	CGlMode W_GlMode(GL_LINES);
+	CGlMode W_GlMode(GL_LINE_STRIP);
 	//glVertex3f(P_Star.Pos().m_x, P_Star.Pos().m_y, 0);
 	int bright = 255 - G_NbPrevLoc * 10;
 	for(int ix = P_Star.m_iIxCur + 1; ix != P_Star.m_iIxCur; ++ix)
@@ -267,9 +267,10 @@ void CStarsWnd::RenderStar(CStar& P_Star)
 				break;
 		}
 		bright += 10;
+		float brightf = 1.0 * bright / 256;
 		//if(W_iX >= G_NbPrevLoc)
 		//	W_iX = 0;
-		
+		glColor3f(brightf, brightf, brightf);
 		glVertex3f(P_Star.m_vPos[ix].m_x, P_Star.m_vPos[ix].m_y, 0);
 	}
 
