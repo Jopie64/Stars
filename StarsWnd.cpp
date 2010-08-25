@@ -7,6 +7,9 @@
 #include "jstd/Threading.h"
 #include "boost/bind.hpp"
 #include <cmath>
+#include <gl/gl.h>
+#include <gl/glu.h>
+//#include <gl/glaux.h>
 
 using namespace Threading;
 
@@ -31,6 +34,22 @@ CFPoint CFPoint::ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen)
 					P_pt_Center.y - P_pt_Screen.y);
 }
 
+class CGlMatrixScope
+{
+public:
+	CGlMatrixScope(){glPushMatrix();}
+	~CGlMatrixScope(){glPopMatrix();}
+};
+
+class CGlMode
+{
+public:
+	CGlMode(GLenum P_eMode){glBegin(P_eMode);}
+	~CGlMode(){glEnd();}
+
+	CGlMatrixScope m_Matrix;
+};
+
 CStar::CStar()
 :	m_iIxCur(0),
 	m_iPosSkip(0)
@@ -50,6 +69,51 @@ void CStar::Pos(const CFPoint& P_Pos)
 	else
 		--m_iPosSkip;
 	m_vPos[m_iIxCur] = P_Pos;
+}
+
+void DrawCube(float xPos, float yPos, float zPos)
+{
+	//CGlMatrixScope W_Matrix;
+	//glBegin(GL_POLYGON);
+	CGlMode W_Mode(GL_POLYGON);
+
+	/*      This is the top face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, 0.0f, 0.0f);
+
+	/*      This is the front face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, 0.0f);
+
+	/*      This is the right face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, -1.0f);
+	glVertex3f(0.0f, 0.0f, -1.0f);
+
+	/*      This is the left face*/
+	glVertex3f(-1.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+
+	/*      This is the bottom face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+
+	/*      This is the back face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(0.0f, -1.0f, -1.0f);
+
+	glEnd();
 }
 
 // CStarsWnd
@@ -80,7 +144,38 @@ BEGIN_MESSAGE_MAP(CStarsWnd, CWnd)
 	ON_WM_KEYDOWN()
 END_MESSAGE_MAP()
 
+void SetupPixelFormat(HDC hDC)
+{
+	/*      Pixel format index
+	*/
+	int nPixelFormat;
 
+	static PIXELFORMATDESCRIPTOR pfd = {
+			sizeof(PIXELFORMATDESCRIPTOR),          //size of structure
+			1,                                      //default version
+			PFD_DRAW_TO_WINDOW |                    //window drawing support
+			PFD_SUPPORT_OPENGL |                    //opengl support
+			PFD_DOUBLEBUFFER,                       //double buffering support
+			PFD_TYPE_RGBA,                          //RGBA color mode
+			32,                                     //32 bit color mode
+			0, 0, 0, 0, 0, 0,                       //ignore color bits
+			0,                                      //no alpha buffer
+			0,                                      //ignore shift bit
+			0,                                      //no accumulation buffer
+			0, 0, 0, 0,                             //ignore accumulation bits
+			16,                                     //16 bit z-buffer size
+			0,                                      //no stencil buffer
+			0,                                      //no aux buffer
+			PFD_MAIN_PLANE,                         //main drawing plane
+			0,                                      //reserved
+			0, 0, 0 };                              //layer masks ignored
+
+			/*      Choose best matching format*/
+			nPixelFormat = ChoosePixelFormat(hDC, &pfd);
+
+			/*      Set the pixel format to the device context*/
+			SetPixelFormat(hDC, nPixelFormat, &pfd);
+}
 
 // CStarsWnd message handlers
 
@@ -88,6 +183,15 @@ int CStarsWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	if (CWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
+
+	//CPaintDC dc(this);
+	m_DC.Attach(GetDC()->m_hDC);
+
+	SetupPixelFormat(m_DC.m_hDC);
+	m_hRC = wglCreateContext(m_DC.m_hDC);
+	wglMakeCurrent(m_DC.m_hDC, m_hRC);
+
+
 
 	m_vStarShared.resize(G_NbStars);
 
@@ -132,16 +236,104 @@ void CStarsWnd::SetPullerPos()
 	m_Puller.Pos(CFPoint::ToStar(W_Rect_Client.CenterPoint(), W_pt_Mouse));
 }
 
+void CStarsWnd::Render()
+{
+    /*      Enable depth testing
+    */
+    glEnable(GL_DEPTH_TEST);
+
+    /*      Heres our rendering. Clears the screen
+            to black, clear the color and depth
+            buffers, and reset our modelview matrix.
+    */
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+	{
+#if 1
+		CGlMode W_GlMode(GL_POLYGON);
+
+		CGlMatrixScope W_NogEenMatrix;
+
+
+		glLoadIdentity();
+
+        glTranslatef(0.0f, 0.0f, -10.0f);
+        glRotatef(30, 0.0f, 1.0f, 0.0f);
+
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, 0.0f, 0.0f);
+
+	/*      This is the front face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, 0.0f);
+
+	/*      This is the right face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, -1.0f);
+	glVertex3f(0.0f, 0.0f, -1.0f);
+
+	/*      This is the left face*/
+	glVertex3f(-1.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+
+	/*      This is the bottom face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+
+	/*      This is the back face*/
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, 0.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(0.0f, -1.0f, -1.0f);
+#endif
+#if 0
+		glPushMatrix();
+            glLoadIdentity();
+
+            /*      Move to 0,0,-30 , rotate the robot on
+                    its y axis, draw the robot, and dispose
+                    of the current matrix.
+            */
+            glTranslatef(0.0f, 0.0f, -10.0f);
+            glRotatef(30, 0.0f, 1.0f, 0.0f);
+            DrawCube(0,0,0); //DrawRobot(0.0f, 0.0f, 0.0f);
+		glPopMatrix();
+#endif //if 0
+
+	}
+
+    glFlush();
+
+    /*      Bring back buffer to foreground
+    */
+	SwapBuffers(m_DC.m_hDC);
+}
 
 void CStarsWnd::OnPaint()
 {
-	CPaintDC dc(this);
-
+	//CPaintDC dc(this);
 	{
 		CScopeLock lock(m_Cs);
 		SetPullerPos();
 		m_vStarMain.swap(m_vStarShared);
 	}
+
+	Render();return;
+
+
+	CDC& dc = m_DC;
+
 	CRect W_Rect_Client;
 	GetClientRect(W_Rect_Client);
 
@@ -265,6 +457,7 @@ void CStarsWnd::AsyncRun()
 			double dist = sqrt(distSqr);
 			double force = G_PullerMass / distSqr;
 			double factor = force / dist;
+			//double factor = 0.00000001 * dist / force;
 
 
 			W_Velocity.m_x -= xoff * factor;
@@ -301,6 +494,24 @@ void CStarsWnd::OnTimer(UINT_PTR nIDEvent)
 void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 {
 	CWnd::OnSize(nType, cx, cy);
+
+	if(cy == 0)
+		cy = 1; //prevent div by zero
+
+	glViewport(0, 0, cx, cy);
+
+	/*      Set current Matrix to projection*/
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity(); //reset projection matrix
+
+	/*      Time to calculate aspect ratio of
+			our window.
+	*/
+	gluPerspective(54.0f, (GLfloat)cx/(GLfloat)cy, 1.0f, 1000.0f);
+
+	glMatrixMode(GL_MODELVIEW); //set modelview matrix
+	glLoadIdentity(); //reset modelview matrix
+
 	{
 		CScopeLock lock(m_Cs);
 		SetPullerPos();
@@ -312,6 +523,10 @@ void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 
 void CStarsWnd::OnDestroy()
 {
+	wglMakeCurrent(m_DC.m_hDC, NULL);
+	wglDeleteContext(m_hRC);
+	m_hRC = NULL;
+
 	CWnd::OnDestroy();
 
 	Stop();

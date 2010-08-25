@@ -59,6 +59,7 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnPaint();
+	void		Render();
 
 	void		SetPullerPos();
 	void		DrawStars(CDC& P_Dc, CvStar& P_vStar);
@@ -89,6 +90,9 @@ private:
 	CvStar	m_vStarShared;
 	CvStar	m_vStarMain;
 	CvStar	m_vStarWork;
+	
+	HGLRC	m_hRC;
+	CDC		m_DC;
 
 	Threading::CMsgThread m_StarMoveTd;
 
