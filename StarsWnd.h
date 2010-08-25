@@ -30,6 +30,7 @@ public:
 	const CFPoint& Velocity()const{return m_Velocity;}
 	
 	void Pos(const CFPoint& P_Pos);
+	void Reset(const CFPoint& P_Pos);
 	void Velocity(const CFPoint& P_Velocity){m_Velocity = P_Velocity;}
 
 

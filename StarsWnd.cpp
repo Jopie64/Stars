@@ -22,6 +22,9 @@ const double G_PullerMass = 2 * G_Precision;
 const double G_ResetY_Fixed = 3 * G_Precision;
 const double G_ResetY_Random = 0.01 * G_Precision;
 
+const int G_xBound = 1500;
+const int G_yBound = 1000;
+
 CPoint CFPoint::ToScreen(const CPoint& P_pt_Center)const
 {
 	return CPoint((int)m_x + P_pt_Center.x, 
@@ -68,6 +71,13 @@ void CStar::Pos(const CFPoint& P_Pos)
 		--m_iPosSkip;
 	m_vPos[m_iIxCur] = P_Pos;
 }
+
+void CStar::Reset(const CFPoint& P_Pos)
+{
+	for(int i=0; i<G_NbPrevLoc; ++i)
+		m_vPos[i] = P_Pos;
+}
+
 
 void DrawCube(float xPos, float yPos, float zPos)
 {
@@ -245,8 +255,24 @@ void CStarsWnd::RenderStar(CStar& P_Star)
 //	glTranslated(P_Star.Pos().m_x, P_Star.Pos().m_y, 0);
 
 
-	CGlMode W_GlMode(GL_POINTS);
-	glVertex3f(P_Star.Pos().m_x, P_Star.Pos().m_y, 0);
+	CGlMode W_GlMode(GL_LINES);
+	//glVertex3f(P_Star.Pos().m_x, P_Star.Pos().m_y, 0);
+	int bright = 255 - G_NbPrevLoc * 10;
+	for(int ix = P_Star.m_iIxCur + 1; ix != P_Star.m_iIxCur; ++ix)
+	{
+		if(ix >= G_NbPrevLoc)
+		{
+			ix = 0;
+			if(P_Star.m_iIxCur == ix)
+				break;
+		}
+		bright += 10;
+		//if(W_iX >= G_NbPrevLoc)
+		//	W_iX = 0;
+		
+		glVertex3f(P_Star.m_vPos[ix].m_x, P_Star.m_vPos[ix].m_y, 0);
+	}
+
 	//glVertex3f(0, 0, 0.0f);
 }
 
@@ -441,8 +467,13 @@ void CStarsWnd::AsyncRun()
 			W_Pos.m_x += W_Velocity.m_x;
 			W_Pos.m_y += W_Velocity.m_y;
 
-			i->Velocity(W_Velocity);
-			i->Pos(W_Pos);
+			if(abs(W_Pos.m_x) > G_xBound || abs(W_Pos.m_y) > G_yBound)
+				ResetStar(i - m_vStarWork.begin());
+			else
+			{
+				i->Velocity(W_Velocity);
+				i->Pos(W_Pos);
+			}
 		}
 		{
 			CScopeLock lock(m_Cs);
@@ -527,7 +558,7 @@ void CStarsWnd::ResetStar(int P_iIx)
 		m_StarMoveTd.PostCallback(simplebind(&CStarsWnd::ResetStar, this, P_iIx));
 		return;
 	}
-	m_vStarWork[P_iIx].Pos(CFPoint(0,0));
+	m_vStarWork[P_iIx].Reset(CFPoint(0,0));
 	m_vStarWork[P_iIx].Velocity(CFPoint(0,G_ResetY_Fixed + G_ResetY_Random * RandF()));
 
 }
