@@ -15,7 +15,7 @@ const int G_NbStars = 5000;
 const double G_RandomInitAllVelocity = 2 * G_Precision;
 const double G_RandomInitSingleVelocity = 0.1 * G_Precision;
 const double G_DownwardGravitation = 0.00005 * G_Precision;
-const double G_PullerMass = 200000000 * G_Precision;
+const double G_PullerMass = 20000000000 * G_Precision;
 const double G_ResetY_Fixed = 3 * G_Precision;
 const double G_ResetY_Random = 0.01 * G_Precision;
 
