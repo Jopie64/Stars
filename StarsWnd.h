@@ -60,6 +60,9 @@ protected:
 public:
 	afx_msg void OnPaint();
 	void		Render();
+	void		RenderStars(CvStar& P_vStar);
+	void		RenderStar(CStar& P_Star);
+	void		RenderPuller(CStar& P_Star);
 
 	void		SetPullerPos();
 	void		DrawStars(CDC& P_Dc, CvStar& P_vStar);

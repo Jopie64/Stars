@@ -46,8 +46,6 @@ class CGlMode
 public:
 	CGlMode(GLenum P_eMode){glBegin(P_eMode);}
 	~CGlMode(){glEnd();}
-
-	CGlMatrixScope m_Matrix;
 };
 
 CStar::CStar()
@@ -113,7 +111,6 @@ void DrawCube(float xPos, float yPos, float zPos)
 	glVertex3f(-1.0f, -1.0f, -1.0f);
 	glVertex3f(0.0f, -1.0f, -1.0f);
 
-	glEnd();
 }
 
 // CStarsWnd
@@ -236,11 +233,42 @@ void CStarsWnd::SetPullerPos()
 	m_Puller.Pos(CFPoint::ToStar(W_Rect_Client.CenterPoint(), W_pt_Mouse));
 }
 
+void CStarsWnd::RenderStars(CvStar& P_vStar)
+{
+ 	for(CvStar::iterator i = P_vStar.begin(); i != P_vStar.end(); ++i)
+		RenderStar(*i);
+}
+
+void CStarsWnd::RenderStar(CStar& P_Star)
+{
+//	CGlMatrixScope W_GlMat;
+//	glTranslated(P_Star.Pos().m_x, P_Star.Pos().m_y, 0);
+
+
+	CGlMode W_GlMode(GL_POINTS);
+	glVertex3f(P_Star.Pos().m_x, P_Star.Pos().m_y, 0);
+	//glVertex3f(0, 0, 0.0f);
+}
+
+void CStarsWnd::RenderPuller(CStar& P_Puller)
+{
+	CGlMatrixScope W_GlMat;
+	glTranslated(P_Puller.Pos().m_x, P_Puller.Pos().m_y, 0);
+
+	glScalef(10.0f, 10.0f, 0.0f);
+	
+	CGlMode W_GlMode(GL_POLYGON);
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(1.0f, 1.0f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f);
+}
+
 void CStarsWnd::Render()
 {
     /*      Enable depth testing
     */
-    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_DEPTH_TEST);
 
     /*      Heres our rendering. Clears the screen
             to black, clear the color and depth
@@ -251,65 +279,11 @@ void CStarsWnd::Render()
     glLoadIdentity();
 
 	{
-#if 1
-		CGlMode W_GlMode(GL_POLYGON);
 
-		CGlMatrixScope W_NogEenMatrix;
-
-
-		glLoadIdentity();
-
-        glTranslatef(0.0f, 0.0f, -10.0f);
-        glRotatef(30, 0.0f, 1.0f, 0.0f);
-
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 0.0f, -1.0f);
-	glVertex3f(-1.0f, 0.0f, -1.0f);
-	glVertex3f(-1.0f, 0.0f, 0.0f);
-
-	/*      This is the front face*/
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(-1.0f, 0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glVertex3f(0.0f, -1.0f, 0.0f);
-
-	/*      This is the right face*/
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, -1.0f, 0.0f);
-	glVertex3f(0.0f, -1.0f, -1.0f);
-	glVertex3f(0.0f, 0.0f, -1.0f);
-
-	/*      This is the left face*/
-	glVertex3f(-1.0f, 0.0f, 0.0f);
-	glVertex3f(-1.0f, 0.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-
-	/*      This is the bottom face*/
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-
-	/*      This is the back face*/
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(-1.0f, 0.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(0.0f, -1.0f, -1.0f);
-#endif
-#if 0
-		glPushMatrix();
-            glLoadIdentity();
-
-            /*      Move to 0,0,-30 , rotate the robot on
-                    its y axis, draw the robot, and dispose
-                    of the current matrix.
-            */
-            glTranslatef(0.0f, 0.0f, -10.0f);
-            glRotatef(30, 0.0f, 1.0f, 0.0f);
-            DrawCube(0,0,0); //DrawRobot(0.0f, 0.0f, 0.0f);
-		glPopMatrix();
-#endif //if 0
+		//glLoadIdentity();
+        glTranslatef(0.0f, 0.0f,-1000.0f);
+		RenderStars(m_vStarMain);
+		RenderPuller(m_Puller);
 
 	}
 
