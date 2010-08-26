@@ -18,7 +18,7 @@ const int G_NbStars = 5000;
 const double G_RandomInitAllVelocity = 2 * G_Precision;
 const double G_RandomInitSingleVelocity = 0.1 * G_Precision;
 const double G_DownwardGravitation = 0.00005 * G_Precision;
-const double G_PullerMass = 2 * G_Precision;
+const double G_PullerMass = 20000000000 * G_Precision;
 const double G_ResetY_Fixed = 3 * G_Precision;
 const double G_ResetY_Random = 0.01 * G_Precision;
 
@@ -457,7 +457,8 @@ void CStarsWnd::AsyncRun()
 			double distSqr = xoff * xoff + yoff * yoff;
 			double dist = sqrt(distSqr);
 			double force = G_PullerMass / distSqr;
-			double factor = force / dist;
+			//double factor = force / dist;
+			double factor = dist / force;
 			//double factor = 0.00000001 * dist / force;
 
 
