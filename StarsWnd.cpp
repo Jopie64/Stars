@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "Stars.h"
 #include "StarsWnd.h"
+#include "jstd/JStd.h"
 #include "jstd/Threading.h"
 #include "boost/bind.hpp"
 #include <cmath>
@@ -24,6 +25,16 @@ const double G_ResetY_Random = 0.01 * G_Precision;
 
 const int G_xBound = 1500;
 const int G_yBound = 1000;
+
+
+__int64 GetMTime()
+{
+	LARGE_INTEGER W_Count;
+	QueryPerformanceCounter(&W_Count);
+	LARGE_INTEGER W_Freq;
+	QueryPerformanceFrequency(&W_Freq);
+	return W_Count.QuadPart * 1000 / W_Freq.QuadPart;
+}
 
 CPoint CFPoint::ToScreen(const CPoint& P_pt_Center)const
 {
@@ -301,14 +312,25 @@ void CStarsWnd::Render()
             to black, clear the color and depth
             buffers, and reset our modelview matrix.
     */
+	__int64 W_iTime = GetMTime();
+
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
 	{
+		CGlMatrixScope W_Mtx;
 
 		//glLoadIdentity();
-        glTranslatef(0.0f, 0.0f,-1000.0f);
+		//glRotatef(sin(0.0003 * W_iTime), 1.0f, 0.0f, 0.0f);
+        glTranslatef(0.0f, 0.0f,-800.0f);
+
+		float W_fSinAngle = 0.0001 * ((W_iTime *10) % (2*31416));
+		float W_fAngle = 5 * sin(W_fSinAngle);
+		GetParent()->SetWindowTextW(JStd::String::Format(L"%3.1f %1.2f", W_fAngle, W_fSinAngle).c_str());
+		//glRotatef(W_fAngle , 1.0f, 0.0f, 0.0f);
+		glRotatef(W_fAngle , 1.0f, 0.0f, 0.0f);
+
 		RenderStars(m_vStarMain);
 		RenderPuller(m_Puller);
 
@@ -513,7 +535,7 @@ void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 	/*      Time to calculate aspect ratio of
 			our window.
 	*/
-	gluPerspective(54.0f, (GLfloat)cx/(GLfloat)cy, 1.0f, 1000.0f);
+	gluPerspective(54.0f, (GLfloat)cx/(GLfloat)cy, 1.0f, 2000.0f);
 
 	glMatrixMode(GL_MODELVIEW); //set modelview matrix
 	glLoadIdentity(); //reset modelview matrix
