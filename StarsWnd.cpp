@@ -11,8 +11,11 @@
 #include <gl/gl.h>
 #include <gl/glu.h>
 //#include <gl/glaux.h>
+#include <functional>
 
-using namespace Threading;
+using std::tr1::bind;
+
+using namespace JStd::Threading;
 
 const double G_Precision = 0.01;
 const int G_NbStars = 5000;
@@ -429,7 +432,7 @@ void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
 void CStarsWnd::Start()
 {
 	m_bStop = false;
-	if(Threading::ExecAsync(boost::bind(&CStarsWnd::AsyncRun, this)) == 0)
+	if(JStd::Threading::ExecAsync(boost::bind(&CStarsWnd::AsyncRun, this)) == 0)
 		return;
 	m_bStopped = false;
 
@@ -578,7 +581,7 @@ void CStarsWnd::ResetStar(int P_iIx)
 {
 	if(!m_StarMoveTd.IsThisThread())
 	{
-		m_StarMoveTd.PostCallback(simplebind(&CStarsWnd::ResetStar, this, P_iIx));
+		m_StarMoveTd.PostCallback(bind(&CStarsWnd::ResetStar, this, P_iIx));
 		return;
 	}
 	m_vStarWork[P_iIx].Reset(CFPoint(0,0));

@@ -82,7 +82,7 @@ private:
 	bool	m_bStop;
 	bool	m_bStopped;
 
-	Threading::CCritSect m_Cs;
+	JStd::Threading::CCritSect m_Cs;
 
 	bool	m_bDoRandomInit;
 
@@ -98,7 +98,7 @@ private:
 	HGLRC	m_hRC;
 	CDC		m_DC;
 
-	Threading::CMsgThread m_StarMoveTd;
+	JStd::Threading::CMsgThread m_StarMoveTd;
 
 
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
