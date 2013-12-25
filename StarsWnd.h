@@ -2,22 +2,25 @@
 
 #include <vector>
 #include "JStd/Threading.h"
+#include "jstd/JGraphics.h"
 
 const int G_NbPrevLoc = 10;
 const int G_NbPrevLoc_Skip = 80;
 
+class CPoint : public POINT
+{
+};
+
 // CStarsWnd
-class CFPoint
+class CFPoint : JStd::Graphics::Point2d<double>
 {
 public:
-	CFPoint():m_x(0), m_y(0){}
-	CFPoint(double P_x, double P_y):m_x(P_x), m_y(P_y){}
+	CFPoint(){}
+	CFPoint(double P_x, double P_y):Point2d(P_x, P_y){}
 
 	CPoint			ToScreen(const CPoint& P_pt_Center)const;
 	static CFPoint	ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen);
 
-	double m_x;
-	double m_y;
 };
 
 class CStar
