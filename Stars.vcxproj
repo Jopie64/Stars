@@ -113,6 +113,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="jstd\JGraphics.cpp" />
+    <ClCompile Include="jstd\JWnd.cpp" />
     <ClCompile Include="Stars.cpp" />
     <ClCompile Include="StarsDlg.cpp" />
     <ClCompile Include="StarsWnd.cpp" />
@@ -125,6 +126,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="jstd\JGraphics.h" />
+    <ClInclude Include="jstd\JWnd.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Stars.h" />
     <ClInclude Include="StarsDlg.h" />

@@ -3,13 +3,14 @@
 #include <vector>
 #include "JStd/Threading.h"
 #include "jstd/JGraphics.h"
+#include "jstd/JWnd.h"
 
 const int G_NbPrevLoc = 10;
 const int G_NbPrevLoc_Skip = 80;
-
-class CPoint : public POINT
-{
-};
+using JStd::Wnd::DC;
+using JStd::Wnd::Bitmap;
+using JStd::Wnd::Rect;
+using JStd::Wnd::Point;
 
 // CStarsWnd
 class CFPoint : JStd::Graphics::Point2d<double>
@@ -18,8 +19,8 @@ public:
 	CFPoint(){}
 	CFPoint(double P_x, double P_y):Point2d(P_x, P_y){}
 
-	CPoint			ToScreen(const CPoint& P_pt_Center)const;
-	static CFPoint	ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen);
+	Point			ToScreen(const Point& P_pt_Center)const;
+	static CFPoint	ToStar(Point P_pt_Center, Point P_pt_Screen);
 
 };
 
@@ -45,10 +46,8 @@ public:
 
 typedef std::vector<CStar> CvStar;
 
-class CStarsWnd : public CWnd
+class CStarsWnd : public JStd::Wnd::WndSubclass
 {
-	DECLARE_DYNAMIC(CStarsWnd)
-
 public:
 	CStarsWnd();
 	virtual ~CStarsWnd();
@@ -58,29 +57,30 @@ public:
 		eT_Invalidate
 	};
 
-protected:
-	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnPaint();
+	void OnPaint();
 
 	void		SetPullerPos();
-	void		DrawStars(CDC& P_Dc, CvStar& P_vStar);
+	void		DrawStars(DC& P_Dc, CvStar& P_vStar);
 
 	void		RandomInit(CvStar& P_vStars, double P_Velocity);
 	void		RandomInit(CStar& P_Star, double P_Velocity);
 
 	void		Start();
 	void		Stop();
+
+	virtual void	WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
+
 private:
 	void		AsyncRun();
 
-	CBitmap m_Bm_Mem;
-	CRect	m_Rect_Bm;
+	Bitmap	m_Bm_Mem;
+	Rect	m_Rect_Bm;
 
 	bool	m_bStop;
 	bool	m_bStopped;
 
-	Threading::CCritSect m_Cs;
+	JStd::Threading::CCritSect m_Cs;
 
 	bool	m_bDoRandomInit;
 
@@ -93,15 +93,15 @@ private:
 	CvStar	m_vStarMain;
 	CvStar	m_vStarWork;
 
-	Threading::CMsgThread m_StarMoveTd;
+	JStd::Threading::CMsgThread m_StarMoveTd;
 
 
-	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	int OnCreate(LPCREATESTRUCT lpCreateStruct);
 public:
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnDestroy();
-	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	void OnTimer(UINT_PTR nIDEvent);
+	void OnSize(UINT nType, int cx, int cy);
+	void OnDestroy();
+	void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 };
 
 

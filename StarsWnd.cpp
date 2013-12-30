@@ -5,10 +5,11 @@
 #include "Stars.h"
 #include "StarsWnd.h"
 #include "jstd/Threading.h"
-#include "boost/bind.hpp"
+#include <functional>
 #include <cmath>
 
-using namespace Threading;
+using namespace JStd::Threading;
+using namespace JStd::Wnd;
 
 const double G_Precision = 0.01;
 const int G_NbStars = 5000;
@@ -19,16 +20,20 @@ const double G_PullerMass = 2 * G_Precision;
 const double G_ResetY_Fixed = 3 * G_Precision;
 const double G_ResetY_Random = 0.01 * G_Precision;
 
-CPoint CFPoint::ToScreen(const CPoint& P_pt_Center)const
+Point CFPoint::ToScreen(const Point& P_pt_Center)const
 {
-	return CPoint((int)m_x + P_pt_Center.x, 
-		          P_pt_Center.y - (int)m_y);
+	Point ptThis(*this);
+	ptThis.y = -ptThis.y;
+	ptThis += P_pt_Center;
+	return ptThis;
 }
 
-CFPoint CFPoint::ToStar(const CPoint& P_pt_Center, const CPoint& P_pt_Screen)
+CFPoint CFPoint::ToStar(Point P_pt_Center, Point P_pt_Screen)
 {
-	return CFPoint( P_pt_Screen.x - P_pt_Center.x,
-					P_pt_Center.y - P_pt_Screen.y);
+	P_pt_Screen.y = -P_pt_Screen.y;
+	P_pt_Center.x = -P_pt_Center.x;
+	P_pt_Screen += P_pt_Center;
+	return CFPoint(P_pt_Screen.x, P_pt_Screen.y);
 }
 
 CStar::CStar()
@@ -54,8 +59,6 @@ void CStar::Pos(const CFPoint& P_Pos)
 
 // CStarsWnd
 
-IMPLEMENT_DYNAMIC(CStarsWnd, CWnd)
-
 CStarsWnd::CStarsWnd()
 :	m_Rect_Bm(0,0,0,0),
 	m_bStopped(true),
@@ -70,33 +73,27 @@ CStarsWnd::~CStarsWnd()
 	Stop();
 }
 
-
-BEGIN_MESSAGE_MAP(CStarsWnd, CWnd)
-	ON_WM_PAINT()
-	ON_WM_CREATE()
-	ON_WM_TIMER()
-	ON_WM_SIZE()
-	ON_WM_DESTROY()
-	ON_WM_KEYDOWN()
-END_MESSAGE_MAP()
-
+void CStarsWnd::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	switch (uMsg)
+	{
+	case WM_PAINT:	OnPaint(); break;
+	case WM_CREATE:	OnCreate((LPCREATESTRUCT)lParam); break;
+	case WM_TIMER:	OnTimer(wParam); break;
+	case WM_SIZE:	OnSize(wParam, LOWORD(lParam), HIWORD(lParam)); break;
+	case WM_DESTROY:OnDestroy(); break;
+	case WM_KEYDOWN:OnKeyDown(wParam, LOWORD(lParam), HIWORD(lParam)); break;
+	}
+}
 
 
 // CStarsWnd message handlers
 
 int CStarsWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-	if (CWnd::OnCreate(lpCreateStruct) == -1)
-		return -1;
-
 	m_vStarShared.resize(G_NbStars);
 
-	//RandomInit();
-
 	Start();
-
-	//SetTimer(eT_Invalidate, 40, NULL);
-
 	return 0;
 }
 
@@ -123,59 +120,52 @@ void CStarsWnd::RandomInit(CvStar& P_vStar, double P_Velocity)
 
 void CStarsWnd::SetPullerPos()
 {
-	CPoint W_pt_Mouse;// = GetCurrentMessage()->pt;
+	POINT W_pt_Mouse;// = GetCurrentMessage()->pt;
 	GetCursorPos(&W_pt_Mouse);
-	ScreenToClient(&W_pt_Mouse);
+	::ScreenToClient(H(), &W_pt_Mouse);
 
-	CRect W_Rect_Client;
-	GetClientRect(W_Rect_Client);
-	m_Puller.Pos(CFPoint::ToStar(W_Rect_Client.CenterPoint(), W_pt_Mouse));
+	m_Puller.Pos(CFPoint::ToStar(GetClientRect().CenterPoint(), JStd::Wnd::ToPoint(W_pt_Mouse)));
 }
 
 
 void CStarsWnd::OnPaint()
 {
-	CPaintDC dc(this);
+	DC dc = PaintDC();
 
 	{
 		CScopeLock lock(m_Cs);
 		SetPullerPos();
 		m_vStarMain.swap(m_vStarShared);
 	}
-	CRect W_Rect_Client;
-	GetClientRect(W_Rect_Client);
+	Rect W_Rect_Client = GetClientRect();
 
 	if(W_Rect_Client != m_Rect_Bm)
 	{
-		m_Bm_Mem.DeleteObject();
-		m_Bm_Mem.CreateCompatibleBitmap(&dc, W_Rect_Client.Width(), W_Rect_Client.Height());
+		m_Bm_Mem = dc.CreateCompatibleBitmap(W_Rect_Client.Size());
 
 		m_Rect_Bm = W_Rect_Client;
 	}
 
-	CDC W_Dc;
-	W_Dc.CreateCompatibleDC(&dc);
+	DC W_Dc = dc.CreateCompatibleDC();
 	//W_Dc.CreateCompatibleDC(&dc);
-	CBitmap* W_OldBmPtr = W_Dc.SelectObject(&m_Bm_Mem);
+	DCSelect sel = dc.Select(m_Bm_Mem);
 
 	//Hier tekeken
 	W_Dc.FillSolidRect(&W_Rect_Client, RGB(0,0,0));
 
 	DrawStars(W_Dc, m_vStarMain);
 
-	CRect W_Rect_Puller(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), CSize(4,4));
-	W_Dc.FillSolidRect(W_Rect_Puller, RGB(255,0,0));
+	W_Dc.FillSolidRect(Rect::FromPointSize(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), Size(4,4)), RGB(255, 0, 0));
 
 
 
 
 
 	//Hier klaar
-	dc.BitBlt(0,0,W_Rect_Client.Width(), W_Rect_Client.Height(), &W_Dc, 0, 0, SRCCOPY);
-	W_Dc.SelectObject(W_OldBmPtr);
+	dc.BitBlt(Point(), W_Dc, Point(), W_Rect_Client.Size(), SRCCOPY);
 }
 
-void PutPixel(CDC& P_Dc, const CPoint& P_Pt, unsigned char P_cBrightness)
+void PutPixel(CDC& P_Dc, const POINT& P_Pt, unsigned char P_cBrightness)
 {
 	//P_Dc.SetPixel(P_Pt, RGB(255,255,255));
 	P_Dc.FillSolidRect(CRect(P_Pt, CSize(1,1)), RGB(P_cBrightness,P_cBrightness,P_cBrightness));
@@ -186,11 +176,11 @@ void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
 	CRect W_Rect_Client;
 	GetClientRect(W_Rect_Client);
 
-	CPoint W_pt_Center = W_Rect_Client.CenterPoint();
+	POINT W_pt_Center = W_Rect_Client.CenterPoint();
 
 	for(CvStar::iterator i = P_vStar.begin(); i != P_vStar.end(); ++i)
 	{
-		CPoint W_pt(i->Pos().ToScreen(W_pt_Center));
+		POINT W_pt(i->Pos().ToScreen(W_pt_Center));
 		if(!W_Rect_Client.PtInRect(W_pt))
 		{
 			//*i = CStar();
