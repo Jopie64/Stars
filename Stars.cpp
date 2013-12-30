@@ -107,9 +107,12 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 PWindow InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // Store instance handle in our global variable
-
-	PWindow PWnd = Wnd::Create(0,szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		Wnd::DefaultRect(), NULL, NULL, hInstance, NULL);
+	WndInit init;
+	init.ClassName = szWindowClass;
+	init.WindowName = szTitle;
+	init.dwStyle = WS_OVERLAPPEDWINDOW;
+	init.hInstance = hInstance;
+	PWindow PWnd = Wnd::Create(init);
 
 	if (!PWnd)
 	{
