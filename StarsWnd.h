@@ -13,7 +13,7 @@ using JStd::Wnd::Rect;
 using JStd::Wnd::Point;
 
 // CStarsWnd
-class CFPoint : JStd::Graphics::Point2d<double>
+class CFPoint : public JStd::Graphics::Point2d<double>
 {
 public:
 	CFPoint(){}
@@ -65,6 +65,7 @@ public:
 
 	void		RandomInit(CvStar& P_vStars, double P_Velocity);
 	void		RandomInit(CStar& P_Star, double P_Velocity);
+	void		InitAndRun();
 
 	void		Start();
 	void		Stop();

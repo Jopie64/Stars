@@ -89,11 +89,16 @@ void CStarsWnd::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 // CStarsWnd message handlers
 
-int CStarsWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
+void CStarsWnd::InitAndRun()
 {
 	m_vStarShared.resize(G_NbStars);
 
 	Start();
+}
+
+int CStarsWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+	InitAndRun();
 	return 0;
 }
 
@@ -130,7 +135,7 @@ void CStarsWnd::SetPullerPos()
 
 void CStarsWnd::OnPaint()
 {
-	DC dc = PaintDC();
+	PaintDC dc = Paint();
 
 	{
 		CScopeLock lock(m_Cs);
@@ -148,39 +153,34 @@ void CStarsWnd::OnPaint()
 
 	DC W_Dc = dc.CreateCompatibleDC();
 	//W_Dc.CreateCompatibleDC(&dc);
-	DCSelect sel = dc.Select(m_Bm_Mem);
+	DCSelect sel = W_Dc.Select(m_Bm_Mem);
 
-	//Hier tekeken
-	W_Dc.FillSolidRect(&W_Rect_Client, RGB(0,0,0));
+	//Hier tekenen
+	W_Dc.FillRect(W_Rect_Client, RGB(0,0,0));
 
 	DrawStars(W_Dc, m_vStarMain);
 
-	W_Dc.FillSolidRect(Rect::FromPointSize(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), Size(4,4)), RGB(255, 0, 0));
-
-
-
-
+	W_Dc.FillRect(Rect::FromPointSize(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), Size(4,4)), RGB(255, 0, 0));
 
 	//Hier klaar
 	dc.BitBlt(Point(), W_Dc, Point(), W_Rect_Client.Size(), SRCCOPY);
 }
 
-void PutPixel(CDC& P_Dc, const POINT& P_Pt, unsigned char P_cBrightness)
+void PutPixel(DC& P_Dc, const Point& P_Pt, unsigned char P_cBrightness)
 {
 	//P_Dc.SetPixel(P_Pt, RGB(255,255,255));
-	P_Dc.FillSolidRect(CRect(P_Pt, CSize(1,1)), RGB(P_cBrightness,P_cBrightness,P_cBrightness));
+	P_Dc.FillRect(Rect::FromPointSize(P_Pt, Size(1,1)), RGB(P_cBrightness,P_cBrightness,P_cBrightness));
 }
 
-void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
+void CStarsWnd::DrawStars(DC& P_Dc, CvStar& P_vStar)
 {
-	CRect W_Rect_Client;
-	GetClientRect(W_Rect_Client);
+	Rect W_Rect_Client = GetClientRect();
 
-	POINT W_pt_Center = W_Rect_Client.CenterPoint();
+	Point W_pt_Center = W_Rect_Client.CenterPoint();
 
 	for(CvStar::iterator i = P_vStar.begin(); i != P_vStar.end(); ++i)
 	{
-		POINT W_pt(i->Pos().ToScreen(W_pt_Center));
+		Point W_pt(i->Pos().ToScreen(W_pt_Center));
 		if(!W_Rect_Client.PtInRect(W_pt))
 		{
 			//*i = CStar();
@@ -204,7 +204,7 @@ void CStarsWnd::DrawStars(CDC& P_Dc, CvStar& P_vStar)
 void CStarsWnd::Start()
 {
 	m_bStop = false;
-	if(Threading::ExecAsync(boost::bind(&CStarsWnd::AsyncRun, this)) == 0)
+	if (JStd::Threading::ExecAsync([=](){ AsyncRun(); }) == 0)
 		return;
 	m_bStopped = false;
 
@@ -243,26 +243,26 @@ void CStarsWnd::AsyncRun()
 		for(int bla=0; bla<4; ++bla)
 		for(CvStar::iterator i = m_vStarWork.begin(); i != m_vStarWork.end(); ++i)
 		{
-//			if(i->m_x == 0 && i->m_y == 0)
+//			if(i->x == 0 && i->y == 0)
 //				int i=0;
 			CFPoint W_Velocity = i->Velocity();
 			CFPoint W_Pos = i->Pos();
-			W_Velocity.m_y -= G_DownwardGravitation;
+			W_Velocity.y -= G_DownwardGravitation;
 
-			double xoff = W_Pos.m_x - W_Puller.Pos().m_x;
-			double yoff = W_Pos.m_y - W_Puller.Pos().m_y;
+			double xoff = W_Pos.x - W_Puller.Pos().x;
+			double yoff = W_Pos.y - W_Puller.Pos().y;
 			double distSqr = xoff * xoff + yoff * yoff;
 			double dist = sqrt(distSqr);
 			double force = G_PullerMass / distSqr;
 			double factor = force / dist;
 
 
-			W_Velocity.m_x -= xoff * factor;
-			W_Velocity.m_y -= yoff * factor;
+			W_Velocity.x -= xoff * factor;
+			W_Velocity.y -= yoff * factor;
 
 
-			W_Pos.m_x += W_Velocity.m_x;
-			W_Pos.m_y += W_Velocity.m_y;
+			W_Pos.x += W_Velocity.x;
+			W_Pos.y += W_Velocity.y;
 
 			i->Velocity(W_Velocity);
 			i->Pos(W_Pos);
@@ -281,7 +281,6 @@ void CStarsWnd::AsyncRun()
 
 void CStarsWnd::OnTimer(UINT_PTR nIDEvent)
 {
-	CWnd::OnTimer(nIDEvent);
 	switch(nIDEvent)
 	{
 	case eT_Invalidate:	Invalidate(FALSE); break;
@@ -290,7 +289,6 @@ void CStarsWnd::OnTimer(UINT_PTR nIDEvent)
 
 void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 {
-	CWnd::OnSize(nType, cx, cy);
 	{
 		CScopeLock lock(m_Cs);
 		SetPullerPos();
@@ -302,8 +300,6 @@ void CStarsWnd::OnSize(UINT nType, int cx, int cy)
 
 void CStarsWnd::OnDestroy()
 {
-	CWnd::OnDestroy();
-
 	Stop();
 }
 
@@ -317,15 +313,13 @@ void CStarsWnd::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	default:
 		W_bHandled = false;
 	}
-	if(!W_bHandled)
-		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
 }
 
 void CStarsWnd::ResetStar(int P_iIx)
 {
 	if(!m_StarMoveTd.IsThisThread())
 	{
-		m_StarMoveTd.PostCallback(simplebind(&CStarsWnd::ResetStar, this, P_iIx));
+		m_StarMoveTd.PostCallback([=](){ ResetStar(P_iIx); });
 		return;
 	}
 	m_vStarWork[P_iIx].Pos(CFPoint(0,0));
