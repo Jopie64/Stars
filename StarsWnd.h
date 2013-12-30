@@ -90,9 +90,7 @@ private:
 
 //Star
 	CStar	m_Puller;
-	CvStar	m_vStarShared;
-	CvStar	m_vStarMain;
-	CvStar	m_vStarWork;
+	CvStar	m_vStar;
 
 	JStd::Threading::CMsgThread m_StarMoveTd;
 

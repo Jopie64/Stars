@@ -91,7 +91,7 @@ void CStarsWnd::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void CStarsWnd::InitAndRun()
 {
-	m_vStarShared.resize(G_NbStars);
+	m_vStar.resize(G_NbStars);
 
 	Start();
 }
@@ -104,7 +104,9 @@ int CStarsWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 double RandF()
 {
-	return 1.0 * (rand() % 0x8000) / 0x8000;
+	const double small = (1.0 / 0x8000) / 0x8000;
+	double rand1 = small * (rand() % 0x8000);
+	return rand1 + 1.0 * (rand() % 0x8000) / 0x8000;
 }
 
 
@@ -140,7 +142,6 @@ void CStarsWnd::OnPaint()
 	{
 		CScopeLock lock(m_Cs);
 		SetPullerPos();
-		m_vStarMain.swap(m_vStarShared);
 	}
 	Rect W_Rect_Client = GetClientRect();
 
@@ -158,7 +159,7 @@ void CStarsWnd::OnPaint()
 	//Hier tekenen
 	W_Dc.FillRect(W_Rect_Client, RGB(0,0,0));
 
-	DrawStars(W_Dc, m_vStarMain);
+	DrawStars(W_Dc, m_vStar);
 
 	W_Dc.FillRect(Rect::FromPointSize(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), Size(4,4)), RGB(255, 0, 0));
 
@@ -221,9 +222,8 @@ void CStarsWnd::AsyncRun()
 {
 	m_StarMoveTd.Register();
 	int count = 0;
-	m_vStarWork.clear();
-	m_vStarWork.resize(G_NbStars);
-	RandomInit(m_vStarWork, G_RandomInitAllVelocity);
+	m_vStar.resize(G_NbStars);
+	RandomInit(m_vStar, G_RandomInitAllVelocity);
 
 	CStar W_Puller;
 	W_Puller.Pos(CFPoint(10,10));
@@ -234,14 +234,13 @@ void CStarsWnd::AsyncRun()
 		if(m_bDoRandomInit)
 		{
 			m_bDoRandomInit = false;
-			m_vStarWork.clear();
-			m_vStarWork.resize(G_NbStars);
-			RandomInit(m_vStarWork, G_RandomInitAllVelocity);
+			m_vStar.resize(G_NbStars);
+			RandomInit(m_vStar, G_RandomInitAllVelocity);
 		}
 
 
 		for(int bla=0; bla<4; ++bla)
-		for(CvStar::iterator i = m_vStarWork.begin(); i != m_vStarWork.end(); ++i)
+		for(CvStar::iterator i = m_vStar.begin(); i != m_vStar.end(); ++i)
 		{
 //			if(i->x == 0 && i->y == 0)
 //				int i=0;
@@ -269,7 +268,6 @@ void CStarsWnd::AsyncRun()
 		}
 		{
 			CScopeLock lock(m_Cs);
-			m_vStarShared = m_vStarWork;
 			W_Puller = m_Puller;
 			Invalidate(FALSE);
 		}
@@ -322,7 +320,7 @@ void CStarsWnd::ResetStar(int P_iIx)
 		m_StarMoveTd.PostCallback([=](){ ResetStar(P_iIx); });
 		return;
 	}
-	m_vStarWork[P_iIx].Pos(CFPoint(0,0));
-	m_vStarWork[P_iIx].Velocity(CFPoint(0,G_ResetY_Fixed + G_ResetY_Random * RandF()));
+	m_vStar[P_iIx].Pos(CFPoint(0,0));
+	m_vStar[P_iIx].Velocity(CFPoint(0,G_ResetY_Fixed + G_ResetY_Random * RandF()));
 
 }
