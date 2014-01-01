@@ -56,7 +56,25 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 //	W_Stars.Attach(pwnd);
 //	W_Stars.InitAndRun();
 
-	//glEnableClientState(GL_VERTEX_ARRAY);
+	struct Color
+	{
+		float r;
+		float g;
+		float b;
+	};
+
+	struct Coord
+	{
+		float x;
+		float y;
+		float z;
+	};
+
+	struct Vertex
+	{
+		Coord coord;
+		Color color;
+	} vertexes [] = { { {0, 0, 0}, { 1, 1, 1 } }, { { 0.5, 0.5, 0 }, { 1, 1, 1 } } };
 
 
 	// Main message loop:
@@ -67,15 +85,27 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
+
 		glPushMatrix();
-		glRotatef(theta, 0.001 * theta, 0.002 * theta, 1.0f);
-		glBegin(GL_TRIANGLES);
+		glRotatef(theta, 0.001f * theta, 0.002f * theta, 1.0f);
+/*		glBegin(GL_TRIANGLES);
 		glColor3f(1.0f, 1.0f, 0.0f); glVertex2f(0.0f, 1.0f);
 		glColor3f(0.0f, 1.0f, 1.0f); glVertex2f(0.87f, -0.5f);
 		glColor3f((theta* 0.01f) - int(theta* 0.01f), 0.0f, 1.0f); glVertex2f(-0.87f, -0.5f);
 		glEnd();
-		glPopMatrix();
+*/		
 
+		glVertexPointer(3, GL_FLOAT, sizeof(Vertex), ((char*)vertexes) + offsetof(Vertex, coord));
+		glColorPointer (3, GL_FLOAT, sizeof(Vertex), ((char*)vertexes) + offsetof(Vertex, color));
+		glDrawArrays(GL_POINTS,0,2);
+
+
+		glDisableClientState(GL_COLOR_ARRAY);
+		glDisableClientState(GL_VERTEX_ARRAY);
+
+		glPopMatrix();
 		pwnd->SwapBuffers();
 
 		theta += 0.1f;
