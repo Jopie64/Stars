@@ -5,13 +5,14 @@
 #include "Stars.h"
 #include "StarsWnd.h"
 #include "jstd/Threading.h"
+#include "JOpenGl.h"
 #include <functional>
 #include <cmath>
 
 using namespace JStd::Threading;
 using namespace JStd::Wnd;
 
-const double G_Precision = 0.01;
+const double G_Precision = 0.00005;
 const int G_NbStars = 5000;
 const double G_RandomInitAllVelocity = 2 * G_Precision;
 const double G_RandomInitSingleVelocity = 0.1 * G_Precision;
@@ -45,7 +46,7 @@ CStar::CStar()
 
 void CStar::Pos(const CFPoint& P_Pos)
 {
-	if(m_iPosSkip <= 0)
+/*	if(m_iPosSkip <= 0)
 	{
 		m_iPosSkip = G_NbPrevLoc_Skip;
 		++m_iIxCur;
@@ -55,6 +56,8 @@ void CStar::Pos(const CFPoint& P_Pos)
 	else
 		--m_iPosSkip;
 	m_vPos[m_iIxCur] = P_Pos;
+*/
+	m_Pos = P_Pos;
 }
 
 // CStarsWnd
@@ -77,7 +80,7 @@ void CStarsWnd::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
-	case WM_PAINT:	OnPaint(); break;
+//	case WM_PAINT:	OnPaint(); break;
 	case WM_CREATE:	OnCreate((LPCREATESTRUCT)lParam); break;
 	case WM_TIMER:	OnTimer(wParam); break;
 	case WM_SIZE:	OnSize(wParam, LOWORD(lParam), HIWORD(lParam)); break;
@@ -134,7 +137,32 @@ void CStarsWnd::SetPullerPos()
 	m_Puller.Pos(CFPoint::ToStar(GetClientRect().CenterPoint(), JStd::Wnd::ToPoint(W_pt_Mouse)));
 }
 
+void CStarsWnd::RenderFrame()
+{
+	SetPullerPos();
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+	//m_vStar
+	glPushMatrix();
+	//glTranslatef(0.0f, 0.0f, -1.0f);
+
+	glVertexPointer(2, GL_DOUBLE, sizeof(CStar), ((char*) &m_vStar[0]) + offsetof(CStar, m_Pos));
+	glColorPointer (3, GL_FLOAT, sizeof(CStar), ((char*) &m_vStar[0]) + offsetof(CStar, m_Color));
+	glDrawArrays(GL_POINTS, 0, m_vStar.size());
+
+
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
+
+	glPopMatrix();
+
+}
+
+/*
 void CStarsWnd::OnPaint()
 {
 	PaintDC dc = Paint();
@@ -173,6 +201,8 @@ void PutPixel(DC& P_Dc, const Point& P_Pt, unsigned char P_cBrightness)
 	P_Dc.FillRect(Rect::FromPointSize(P_Pt, Size(1,1)), RGB(P_cBrightness,P_cBrightness,P_cBrightness));
 }
 
+
+
 void CStarsWnd::DrawStars(DC& P_Dc, CvStar& P_vStar)
 {
 	Rect W_Rect_Client = GetClientRect();
@@ -201,9 +231,11 @@ void CStarsWnd::DrawStars(DC& P_Dc, CvStar& P_vStar)
 		}
 	}
 }
+*/
 
 void CStarsWnd::Start()
 {
+	SetPullerPos();
 	m_bStop = false;
 	if (JStd::Threading::ExecAsync([=](){ AsyncRun(); }) == 0)
 		return;
@@ -218,11 +250,16 @@ void CStarsWnd::Stop()
 		Sleep(20);
 }
 
+bool IsOOB(const CStar& star)
+{
+	return abs(star.m_Pos.x) >= 1.0 && abs(star.m_Pos.y) >= 1.0;
+}
+
 void CStarsWnd::AsyncRun()
 {
 	m_StarMoveTd.Register();
 	int count = 0;
-	m_vStar.resize(G_NbStars);
+//	m_vStar.resize(G_NbStars);
 	RandomInit(m_vStar, G_RandomInitAllVelocity);
 
 	CStar W_Puller;
@@ -265,11 +302,13 @@ void CStarsWnd::AsyncRun()
 
 			i->Velocity(W_Velocity);
 			i->Pos(W_Pos);
+			if (IsOOB(*i))
+				ResetStar(i - m_vStar.begin());
 		}
 		{
 			CScopeLock lock(m_Cs);
 			W_Puller = m_Puller;
-			Invalidate(FALSE);
+			//Invalidate(FALSE);
 		}
 	}
 	

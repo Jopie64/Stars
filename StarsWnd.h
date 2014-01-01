@@ -22,6 +22,16 @@ public:
 	Point			ToScreen(const Point& P_pt_Center)const;
 	static CFPoint	ToStar(Point P_pt_Center, Point P_pt_Screen);
 
+
+};
+
+class GlColor
+{
+public:
+	GlColor() : r(1.0f), g(1.0f), b(1.0f) {}
+	float r;
+	float g;
+	float b;
 };
 
 class CStar
@@ -30,18 +40,22 @@ public:
 	typedef std::vector<CFPoint> CvPoint;
 	CStar();
 
-	const CFPoint& Pos()const{return m_vPos[m_iIxCur];}
-	const CFPoint& Velocity()const{return m_Velocity;}
+//	const CFPoint& Pos()const{return m_vPos[m_iIxCur];}
+	const CFPoint& Pos()const{ return m_Pos; }
+	const CFPoint& Velocity()const{ return m_Velocity; }
 	
 	void Pos(const CFPoint& P_Pos);
 	void Velocity(const CFPoint& P_Velocity){m_Velocity = P_Velocity;}
 
 
 	//CvPoint m_vPos;
-	CFPoint m_vPos[G_NbPrevLoc];
+	///CFPoint m_vPos[G_NbPrevLoc];
+	CFPoint m_Pos;
 	int		m_iIxCur;
 	int		m_iPosSkip;
 	CFPoint m_Velocity;
+
+	GlColor	m_Color;
 };
 
 typedef std::vector<CStar> CvStar;
@@ -58,10 +72,10 @@ public:
 	};
 
 public:
-	void OnPaint();
+//	void OnPaint();
 
 	void		SetPullerPos();
-	void		DrawStars(DC& P_Dc, CvStar& P_vStar);
+//	void		DrawStars(DC& P_Dc, CvStar& P_vStar);
 
 	void		RandomInit(CvStar& P_vStars, double P_Velocity);
 	void		RandomInit(CStar& P_Star, double P_Velocity);
@@ -69,6 +83,8 @@ public:
 
 	void		Start();
 	void		Stop();
+
+	void		RenderFrame();
 
 	virtual void	WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
