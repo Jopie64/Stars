@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <chrono>
 #include "JStd/Threading.h"
 #include "jstd/JGraphics.h"
 #include "jstd/JWnd.h"
@@ -107,6 +108,8 @@ private:
 //Star
 	CStar	m_Puller;
 	CvStar	m_vStar;
+
+	std::chrono::steady_clock::time_point m_timeLastMove;
 
 	JStd::Threading::CMsgThread m_StarMoveTd;
 
