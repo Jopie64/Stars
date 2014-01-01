@@ -4,10 +4,15 @@
 #include "stdafx.h"
 #include "Stars.h"
 #include "StarsWnd.h"
+#include "JOpenGl.h"
+#include <sstream>
 
 #define MAX_LOADSTRING 100
 
 using namespace JStd::Wnd;
+using namespace std;
+using namespace JStd::GL;
+
 // Global Variables:
 HINSTANCE hInst;								// current instance
 TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
@@ -16,6 +21,7 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 // Forward declarations of functions included in this code module:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 PWindow				InitInstance(HINSTANCE, int);
+PGlWnd 				InitInstanceGl(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
@@ -27,43 +33,53 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
- 	// TODO: Place code here.
-	MSG msg;
-	HACCEL hAccelTable;
-
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_STARS, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
 	// Perform application initialization:
-	PWindow pwnd;
+	JStd::GL::PGlWnd pwnd;
 	try
 	{
-		pwnd = InitInstance(hInstance, nCmdShow);
+		pwnd = InitInstanceGl(hInstance, nCmdShow);
 	}
-	catch (std::exception&)
+	catch (exception& e)
 	{
+		wostringstream os;
+		os << L"Unable to initialize" << endl << e.what();
+		MessageBox(NULL, os.str().c_str(), L"Initialization failed.", MB_ICONERROR);
 		return FALSE;
 	}
 
-	CStarsWnd W_Stars;
-	W_Stars.Attach(pwnd);
-	W_Stars.InitAndRun();
+//	CStarsWnd W_Stars;
+//	W_Stars.Attach(pwnd);
+//	W_Stars.InitAndRun();
 
-	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_STARS));
+	//glEnableClientState(GL_VERTEX_ARRAY);
+
 
 	// Main message loop:
-	while (GetMessage(&msg, NULL, 0, 0))
+	float theta = 0.0f;
+	return JStd::Wnd::RunLoop(LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_STARS)),
+		[&]()
 	{
-		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-	}
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	return (int) msg.wParam;
+		glPushMatrix();
+		glRotatef(theta, 0.001 * theta, 0.002 * theta, 1.0f);
+		glBegin(GL_TRIANGLES);
+		glColor3f(1.0f, 1.0f, 0.0f); glVertex2f(0.0f, 1.0f);
+		glColor3f(0.0f, 1.0f, 1.0f); glVertex2f(0.87f, -0.5f);
+		glColor3f((theta* 0.01f) - int(theta* 0.01f), 0.0f, 1.0f); glVertex2f(-0.87f, -0.5f);
+		glEnd();
+		glPopMatrix();
+
+		pwnd->SwapBuffers();
+
+		theta += 0.1f;
+	});
 }
 
 
@@ -107,12 +123,33 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 PWindow InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // Store instance handle in our global variable
-	WndInit init;
+	JStd::Wnd::WndInit init;
 	init.ClassName = szWindowClass;
 	init.WindowName = szTitle;
 	init.dwStyle = WS_OVERLAPPEDWINDOW;
 	init.hInstance = hInstance;
 	PWindow PWnd = Wnd::Create(init);
+
+	if (!PWnd)
+	{
+		return FALSE;
+	}
+
+	ShowWindow(PWnd->H(), nCmdShow);
+	UpdateWindow(PWnd->H());
+
+	return PWnd;
+}
+
+PGlWnd InitInstanceGl(HINSTANCE hInstance, int nCmdShow)
+{
+	using namespace JStd::GL;
+	hInst = hInstance; // Store instance handle in our global variable
+	JStd::GL::WndInit init;
+	init.WindowName = szTitle;
+	init.dwStyle |= WS_OVERLAPPEDWINDOW;
+	init.hInstance = hInstance;
+	PGlWnd PWnd = CreateGlWindow(init);
 
 	if (!PWnd)
 	{

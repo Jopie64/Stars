@@ -51,6 +51,9 @@
     <ClInclude Include="jstd\Threading.h">
       <Filter>Header Files\JStd</Filter>
     </ClInclude>
+    <ClInclude Include="jstd\JOpenGl.h">
+      <Filter>Header Files\JStd</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -72,6 +75,9 @@
       <Filter>Source Files\JStd</Filter>
     </ClCompile>
     <ClCompile Include="jstd\JGraphics.cpp">
+      <Filter>Source Files\JStd</Filter>
+    </ClCompile>
+    <ClCompile Include="jstd\JOpenGl.cpp">
       <Filter>Source Files\JStd</Filter>
     </ClCompile>
   </ItemGroup>

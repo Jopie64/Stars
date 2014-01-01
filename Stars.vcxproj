@@ -82,6 +82,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="jstd\JGraphics.h" />
+    <ClInclude Include="jstd\JOpenGl.h" />
     <ClInclude Include="jstd\JStd.h" />
     <ClInclude Include="jstd\JWnd.h" />
     <ClInclude Include="jstd\Threading.h" />
@@ -93,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="jstd\JGraphics.cpp" />
+    <ClCompile Include="jstd\JOpenGl.cpp" />
     <ClCompile Include="jstd\JStd.cpp" />
     <ClCompile Include="jstd\JWnd.cpp" />
     <ClCompile Include="jstd\Threading.cpp" />
