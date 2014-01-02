@@ -224,11 +224,11 @@ void CStarsWnd::AsyncRun()
 			double distSqr = xoff * xoff + yoff * yoff;
 			double dist = sqrt(distSqr);
 			double force = G_PullerMass / distSqr;
-			double factor = force / dist;
+			double factor = moveSeconds * force / dist;
 
 
-			W_Velocity.x -= xoff * factor * moveSeconds;
-			W_Velocity.y -= yoff * factor * moveSeconds;
+			W_Velocity.x -= xoff * factor;
+			W_Velocity.y -= yoff * factor;
 
 
 			W_Pos.x += W_Velocity.x * moveSeconds;
