@@ -5,28 +5,23 @@
 #include "Stars.h"
 #include "StarsWnd.h"
 #include "jstd/Threading.h"
+#include "JOpenGl.h"
 #include <functional>
 #include <cmath>
+#include <gl/GLU.h>
+#include <sstream>
 
 using namespace JStd::Threading;
 using namespace JStd::Wnd;
 
-const double G_Precision = 0.01;
-const int G_NbStars = 5000;
+const double G_Precision = 0.005;
+const int G_NbStars = 50000;
 const double G_RandomInitAllVelocity = 2 * G_Precision;
 const double G_RandomInitSingleVelocity = 0.1 * G_Precision;
 const double G_DownwardGravitation = 0.00005 * G_Precision;
-const double G_PullerMass = 2 * G_Precision;
+const double G_PullerMass = G_Precision;
 const double G_ResetY_Fixed = 3 * G_Precision;
 const double G_ResetY_Random = 0.01 * G_Precision;
-
-Point CFPoint::ToScreen(const Point& P_pt_Center)const
-{
-	Point ptThis(*this);
-	ptThis.y = -ptThis.y;
-	ptThis += P_pt_Center;
-	return ptThis;
-}
 
 CFPoint CFPoint::ToStar(Point P_pt_Center, Point P_pt_Screen)
 {
@@ -45,7 +40,7 @@ CStar::CStar()
 
 void CStar::Pos(const CFPoint& P_Pos)
 {
-	if(m_iPosSkip <= 0)
+/*	if(m_iPosSkip <= 0)
 	{
 		m_iPosSkip = G_NbPrevLoc_Skip;
 		++m_iIxCur;
@@ -55,6 +50,8 @@ void CStar::Pos(const CFPoint& P_Pos)
 	else
 		--m_iPosSkip;
 	m_vPos[m_iIxCur] = P_Pos;
+*/
+	m_Pos = P_Pos;
 }
 
 // CStarsWnd
@@ -63,9 +60,11 @@ CStarsWnd::CStarsWnd()
 :	m_Rect_Bm(0,0,0,0),
 	m_bStopped(true),
 	m_bStop(false),
-	m_bDoRandomInit(false)
+	m_bDoRandomInit(false),
+	m_timeLastMove(std::chrono::steady_clock::now())
 {
-
+	m_Puller.m_Color.g = 0.6f;
+	m_Puller.m_Color.b = 0.6f;
 }
 
 CStarsWnd::~CStarsWnd()
@@ -77,7 +76,7 @@ void CStarsWnd::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
-	case WM_PAINT:	OnPaint(); break;
+//	case WM_PAINT:	OnPaint(); break;
 	case WM_CREATE:	OnCreate((LPCREATESTRUCT)lParam); break;
 	case WM_TIMER:	OnTimer(wParam); break;
 	case WM_SIZE:	OnSize(wParam, LOWORD(lParam), HIWORD(lParam)); break;
@@ -131,79 +130,72 @@ void CStarsWnd::SetPullerPos()
 	GetCursorPos(&W_pt_Mouse);
 	::ScreenToClient(H(), &W_pt_Mouse);
 
-	m_Puller.Pos(CFPoint::ToStar(GetClientRect().CenterPoint(), JStd::Wnd::ToPoint(W_pt_Mouse)));
+	W_pt_Mouse.y = GetClientRect().br.y - W_pt_Mouse.y;
+
+	GLdouble modelMatrix[16];
+	glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
+	GLdouble projMatrix[16];
+	glGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
+	GLint viewPort[4];
+	glGetIntegerv(GL_VIEWPORT, viewPort);
+
+	CFPoint newPos;
+	double dummy;
+	gluUnProject(W_pt_Mouse.x, W_pt_Mouse.y, 0, modelMatrix, projMatrix, viewPort, &newPos.x, &newPos.y, &dummy);
+
+	//m_Puller.Pos(CFPoint::ToStar(GetClientRect().CenterPoint(), JStd::Wnd::ToPoint(W_pt_Mouse)));
+	m_Puller.Pos(newPos);
+}
+
+void CStarsWnd::RenderStars(size_t size, CStar* stars)
+{
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+	//m_vStar
+	glPushMatrix();
+	//glTranslatef(0.0f, 0.0f, 0.1f);
+	//glRotatef(0.5f, 0, 1.0f, 0.0f);
+
+	glVertexPointer(2, GL_DOUBLE, sizeof(CStar), ((char*) &stars[0]) + offsetof(CStar, m_Pos));
+	glColorPointer (3, GL_FLOAT,  sizeof(CStar), ((char*) &stars[0]) + offsetof(CStar, m_Color));
+	glDrawArrays(GL_POINTS, 0, size);
+	glPopMatrix();
+
+
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+void CStarsWnd::RenderStars()
+{
+	RenderStars(m_vStar.size(), &m_vStar[0]);
+}
+
+void CStarsWnd::RenderPuller()
+{
+	glClear(GL_DEPTH_BUFFER_BIT);
+	RenderStars(1, &m_Puller);
 }
 
 
-void CStarsWnd::OnPaint()
+void CStarsWnd::RenderFrame()
 {
-	PaintDC dc = Paint();
+	SetPullerPos();
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glPushMatrix();
 
-	{
-		CScopeLock lock(m_Cs);
-		SetPullerPos();
-	}
-	Rect W_Rect_Client = GetClientRect();
+	RenderStars();
+	RenderPuller();
 
-	if(W_Rect_Client != m_Rect_Bm)
-	{
-		m_Bm_Mem = dc.CreateCompatibleBitmap(W_Rect_Client.Size());
+	glPopMatrix();
 
-		m_Rect_Bm = W_Rect_Client;
-	}
-
-	DC W_Dc = dc.CreateCompatibleDC();
-	//W_Dc.CreateCompatibleDC(&dc);
-	DCSelect sel = W_Dc.Select(m_Bm_Mem);
-
-	//Hier tekenen
-	W_Dc.FillRect(W_Rect_Client, RGB(0,0,0));
-
-	DrawStars(W_Dc, m_vStar);
-
-	W_Dc.FillRect(Rect::FromPointSize(m_Puller.Pos().ToScreen(W_Rect_Client.CenterPoint()), Size(4,4)), RGB(255, 0, 0));
-
-	//Hier klaar
-	dc.BitBlt(Point(), W_Dc, Point(), W_Rect_Client.Size(), SRCCOPY);
-}
-
-void PutPixel(DC& P_Dc, const Point& P_Pt, unsigned char P_cBrightness)
-{
-	//P_Dc.SetPixel(P_Pt, RGB(255,255,255));
-	P_Dc.FillRect(Rect::FromPointSize(P_Pt, Size(1,1)), RGB(P_cBrightness,P_cBrightness,P_cBrightness));
-}
-
-void CStarsWnd::DrawStars(DC& P_Dc, CvStar& P_vStar)
-{
-	Rect W_Rect_Client = GetClientRect();
-
-	Point W_pt_Center = W_Rect_Client.CenterPoint();
-
-	for(CvStar::iterator i = P_vStar.begin(); i != P_vStar.end(); ++i)
-	{
-		Point W_pt(i->Pos().ToScreen(W_pt_Center));
-		if(!W_Rect_Client.PtInRect(W_pt))
-		{
-			//*i = CStar();
-			//RandomInit(*i, G_RandomInitSingleVelocity);
-			ResetStar(i - P_vStar.begin());
-			continue;
-		}
-		//P_Dc.SetPixel(W_pt, RGB(255,255,255));
-		//P_Dc.FillSolidRect(CRect(W_pt, CSize(1,1)), RGB(255,255,255));
-		int bright = 255 - G_NbPrevLoc * 10;
-		for(int ix = i->m_iIxCur + 1; ix != i->m_iIxCur; ++ix >= G_NbPrevLoc ? ix = 0 : ix = ix)
-		{
-			bright += 10;
-			//if(W_iX >= G_NbPrevLoc)
-			//	W_iX = 0;
-			PutPixel(P_Dc, i->m_vPos[ix].ToScreen(W_pt_Center),bright);
-		}
-	}
 }
 
 void CStarsWnd::Start()
 {
+	SetPullerPos();
 	m_bStop = false;
 	if (JStd::Threading::ExecAsync([=](){ AsyncRun(); }) == 0)
 		return;
@@ -218,19 +210,33 @@ void CStarsWnd::Stop()
 		Sleep(20);
 }
 
+bool IsOOB(const CStar& star)
+{
+	return abs(star.m_Pos.x) >= 1.0 && abs(star.m_Pos.y) >= 1.0;
+}
+
 void CStarsWnd::AsyncRun()
 {
+	using namespace std::chrono;
 	m_StarMoveTd.Register();
-	int count = 0;
-	m_vStar.resize(G_NbStars);
+//	m_vStar.resize(G_NbStars);
 	RandomInit(m_vStar, G_RandomInitAllVelocity);
+
+	__int64 count = 0;
 
 	CStar W_Puller;
 	W_Puller.Pos(CFPoint(10,10));
 	while(!m_StarMoveTd.CallMessages())
 	{
-		//if(count++ % 3 == 0)
-		//	Sleep(1);
+		steady_clock::time_point now = steady_clock::now();
+		double moveSeconds = duration_cast<duration<double>>(now - m_timeLastMove).count();
+		m_timeLastMove = now;
+		if (count++ % 100 == 0)
+		{
+			std::wostringstream os;
+			os << L"Seconds: " << moveSeconds;
+//			MessageBox(NULL, os.str().c_str(), L"Timing", MB_ICONINFORMATION);
+		}
 		if(m_bDoRandomInit)
 		{
 			m_bDoRandomInit = false;
@@ -246,30 +252,32 @@ void CStarsWnd::AsyncRun()
 //				int i=0;
 			CFPoint W_Velocity = i->Velocity();
 			CFPoint W_Pos = i->Pos();
-			W_Velocity.y -= G_DownwardGravitation;
+			W_Velocity.y -= G_DownwardGravitation * moveSeconds;
 
 			double xoff = W_Pos.x - W_Puller.Pos().x;
 			double yoff = W_Pos.y - W_Puller.Pos().y;
 			double distSqr = xoff * xoff + yoff * yoff;
 			double dist = sqrt(distSqr);
 			double force = G_PullerMass / distSqr;
-			double factor = force / dist;
+			double factor = moveSeconds * force / dist;
 
 
 			W_Velocity.x -= xoff * factor;
 			W_Velocity.y -= yoff * factor;
 
 
-			W_Pos.x += W_Velocity.x;
-			W_Pos.y += W_Velocity.y;
+			W_Pos.x += W_Velocity.x * moveSeconds;
+			W_Pos.y += W_Velocity.y * moveSeconds;
 
 			i->Velocity(W_Velocity);
 			i->Pos(W_Pos);
+			if (IsOOB(*i))
+				ResetStar(i - m_vStar.begin());
 		}
 		{
 			CScopeLock lock(m_Cs);
 			W_Puller = m_Puller;
-			Invalidate(FALSE);
+			//Invalidate(FALSE);
 		}
 	}
 	
