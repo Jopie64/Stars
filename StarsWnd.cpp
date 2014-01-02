@@ -13,7 +13,7 @@ using namespace JStd::Threading;
 using namespace JStd::Wnd;
 
 const double G_Precision = 0.05;
-const int G_NbStars = 5000;
+const int G_NbStars = 50000;
 const double G_RandomInitAllVelocity = 2 * G_Precision;
 const double G_RandomInitSingleVelocity = 0.1 * G_Precision;
 const double G_DownwardGravitation = 0.00005 * G_Precision;
@@ -69,7 +69,8 @@ CStarsWnd::CStarsWnd()
 	m_bDoRandomInit(false),
 	m_timeLastMove(std::chrono::steady_clock::now())
 {
-
+	m_Puller.m_Color.g = 0.6f;
+	m_Puller.m_Color.b = 0.6f;
 }
 
 CStarsWnd::~CStarsWnd()
@@ -138,26 +139,44 @@ void CStarsWnd::SetPullerPos()
 	m_Puller.Pos(CFPoint::ToStar(GetClientRect().CenterPoint(), JStd::Wnd::ToPoint(W_pt_Mouse)));
 }
 
+void CStarsWnd::RenderStars(size_t size, CStar* stars)
+{
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+	//m_vStar
+	//glTranslatef(0.0f, 0.0f, -1.0f);
+
+	glVertexPointer(2, GL_DOUBLE, sizeof(CStar), ((char*) &stars[0]) + offsetof(CStar, m_Pos));
+	glColorPointer(3, GL_FLOAT, sizeof(CStar), ((char*) &stars[0]) + offsetof(CStar, m_Color));
+	glDrawArrays(GL_POINTS, 0, size);
+
+
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+void CStarsWnd::RenderStars()
+{
+	RenderStars(m_vStar.size(), &m_vStar[0]);
+}
+
+void CStarsWnd::RenderPuller()
+{
+	glClear(GL_DEPTH_BUFFER_BIT);
+	RenderStars(1, &m_Puller);
+}
+
+
 void CStarsWnd::RenderFrame()
 {
 	SetPullerPos();
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	//m_vStar
 	glPushMatrix();
-	//glTranslatef(0.0f, 0.0f, -1.0f);
 
-	glVertexPointer(2, GL_DOUBLE, sizeof(CStar), ((char*) &m_vStar[0]) + offsetof(CStar, m_Pos));
-	glColorPointer (3, GL_FLOAT, sizeof(CStar), ((char*) &m_vStar[0]) + offsetof(CStar, m_Color));
-	glDrawArrays(GL_POINTS, 0, m_vStar.size());
-
-
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
+	RenderStars();
+	RenderPuller();
 
 	glPopMatrix();
 

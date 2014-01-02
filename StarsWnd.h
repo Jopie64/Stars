@@ -86,6 +86,9 @@ public:
 	void		Stop();
 
 	void		RenderFrame();
+	void		RenderStars();
+	void		RenderStars(size_t size, CStar* stars);
+	void		RenderPuller();
 
 	virtual void	WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
