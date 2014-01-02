@@ -1,10 +1,11 @@
 #pragma once
 
 #include <vector>
+#include <list>
 #include <chrono>
 #include "JStd/Threading.h"
 #include "jstd/JGraphics.h"
-#include "jstd/JWnd.h"
+#include "jstd/JOpenGl.h"
 
 const int G_NbPrevLoc = 10;
 const int G_NbPrevLoc_Skip = 80;
@@ -63,7 +64,7 @@ typedef std::vector<CStar> CvStar;
 class CStarsWnd : public JStd::Wnd::WndSubclass
 {
 public:
-	CStarsWnd();
+	CStarsWnd(JStd::GL::PGlWnd P_pWnd);
 	virtual ~CStarsWnd();
 
 	enum eTimer
@@ -88,17 +89,17 @@ public:
 	void		RenderStars();
 	void		RenderStars(size_t size, CStar* stars);
 	void		RenderPuller();
+	void		RenderText();
 
 	virtual void	WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
 private:
-	void		AsyncRun();
+	void		AsyncRun(JStd::Threading::CMsgThread* ptd, size_t starBegin, size_t starCount);
 
 	Bitmap	m_Bm_Mem;
 	Rect	m_Rect_Bm;
 
 	bool	m_bStop;
-	bool	m_bStopped;
 
 	JStd::Threading::CCritSect m_Cs;
 
@@ -111,9 +112,9 @@ private:
 	CStar	m_Puller;
 	CvStar	m_vStar;
 
-	std::chrono::steady_clock::time_point m_timeLastMove;
+	std::list<JStd::Threading::CMsgThread> m_StarMoveTdList;
 
-	JStd::Threading::CMsgThread m_StarMoveTd;
+	JStd::GL::PGlWnd m_pWnd;
 
 
 	int OnCreate(LPCREATESTRUCT lpCreateStruct);

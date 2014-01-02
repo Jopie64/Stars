@@ -52,8 +52,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	CStarsWnd W_Stars;
-	W_Stars.Attach(pwnd);
+	CStarsWnd W_Stars(pwnd);
 	W_Stars.InitAndRun();
 
 
