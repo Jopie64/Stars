@@ -8,6 +8,7 @@
 #include "JOpenGl.h"
 #include <functional>
 #include <cmath>
+#include <gl/GLU.h>
 
 using namespace JStd::Threading;
 using namespace JStd::Wnd;
@@ -136,7 +137,21 @@ void CStarsWnd::SetPullerPos()
 	GetCursorPos(&W_pt_Mouse);
 	::ScreenToClient(H(), &W_pt_Mouse);
 
-	m_Puller.Pos(CFPoint::ToStar(GetClientRect().CenterPoint(), JStd::Wnd::ToPoint(W_pt_Mouse)));
+	W_pt_Mouse.y = GetClientRect().br.y - W_pt_Mouse.y;
+
+	GLdouble modelMatrix[16];
+	glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
+	GLdouble projMatrix[16];
+	glGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
+	GLint viewPort[4];
+	glGetIntegerv(GL_VIEWPORT, viewPort);
+
+	CFPoint newPos;
+	double dummy;
+	gluUnProject(W_pt_Mouse.x, W_pt_Mouse.y, 0, modelMatrix, projMatrix, viewPort, &newPos.x, &newPos.y, &dummy);
+
+	//m_Puller.Pos(CFPoint::ToStar(GetClientRect().CenterPoint(), JStd::Wnd::ToPoint(W_pt_Mouse)));
+	m_Puller.Pos(newPos);
 }
 
 void CStarsWnd::RenderStars(size_t size, CStar* stars)
