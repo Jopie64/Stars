@@ -20,7 +20,6 @@ public:
 	CFPoint(){}
 	CFPoint(double P_x, double P_y):Point2d(P_x, P_y){}
 
-	Point			ToScreen(const Point& P_pt_Center)const;
 	static CFPoint	ToStar(Point P_pt_Center, Point P_pt_Screen);
 
 

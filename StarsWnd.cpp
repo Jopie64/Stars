@@ -9,26 +9,19 @@
 #include <functional>
 #include <cmath>
 #include <gl/GLU.h>
+#include <sstream>
 
 using namespace JStd::Threading;
 using namespace JStd::Wnd;
 
-const double G_Precision = 0.05;
+const double G_Precision = 0.005;
 const int G_NbStars = 50000;
 const double G_RandomInitAllVelocity = 2 * G_Precision;
 const double G_RandomInitSingleVelocity = 0.1 * G_Precision;
 const double G_DownwardGravitation = 0.00005 * G_Precision;
-const double G_PullerMass = 2 * G_Precision;
+const double G_PullerMass = G_Precision;
 const double G_ResetY_Fixed = 3 * G_Precision;
 const double G_ResetY_Random = 0.01 * G_Precision;
-
-Point CFPoint::ToScreen(const Point& P_pt_Center)const
-{
-	Point ptThis(*this);
-	ptThis.y = -ptThis.y;
-	ptThis += P_pt_Center;
-	return ptThis;
-}
 
 CFPoint CFPoint::ToStar(Point P_pt_Center, Point P_pt_Screen)
 {
@@ -160,11 +153,14 @@ void CStarsWnd::RenderStars(size_t size, CStar* stars)
 	glEnableClientState(GL_COLOR_ARRAY);
 
 	//m_vStar
-	//glTranslatef(0.0f, 0.0f, -1.0f);
+	glPushMatrix();
+	//glTranslatef(0.0f, 0.0f, 0.1f);
+	//glRotatef(0.5f, 0, 1.0f, 0.0f);
 
 	glVertexPointer(2, GL_DOUBLE, sizeof(CStar), ((char*) &stars[0]) + offsetof(CStar, m_Pos));
-	glColorPointer(3, GL_FLOAT, sizeof(CStar), ((char*) &stars[0]) + offsetof(CStar, m_Color));
+	glColorPointer (3, GL_FLOAT,  sizeof(CStar), ((char*) &stars[0]) + offsetof(CStar, m_Color));
 	glDrawArrays(GL_POINTS, 0, size);
+	glPopMatrix();
 
 
 	glDisableClientState(GL_COLOR_ARRAY);
@@ -223,9 +219,10 @@ void CStarsWnd::AsyncRun()
 {
 	using namespace std::chrono;
 	m_StarMoveTd.Register();
-	int count = 0;
 //	m_vStar.resize(G_NbStars);
 	RandomInit(m_vStar, G_RandomInitAllVelocity);
+
+	__int64 count = 0;
 
 	CStar W_Puller;
 	W_Puller.Pos(CFPoint(10,10));
@@ -234,8 +231,12 @@ void CStarsWnd::AsyncRun()
 		steady_clock::time_point now = steady_clock::now();
 		double moveSeconds = duration_cast<duration<double>>(now - m_timeLastMove).count();
 		m_timeLastMove = now;
-		//if(count++ % 3 == 0)
-		//	Sleep(1);
+		if (count++ % 100 == 0)
+		{
+			std::wostringstream os;
+			os << L"Seconds: " << moveSeconds;
+//			MessageBox(NULL, os.str().c_str(), L"Timing", MB_ICONINFORMATION);
+		}
 		if(m_bDoRandomInit)
 		{
 			m_bDoRandomInit = false;
