@@ -22,7 +22,7 @@ const double G_DownwardGravitation = 0.00005 * G_Precision;
 const double G_PullerMass = G_Precision;
 const double G_ResetY_Fixed = 3 * G_Precision;
 const double G_ResetY_Random = 0.01 * G_Precision;
-const int G_NbThreads = 3;
+const int G_NbThreads = 4;
 
 CFPoint CFPoint::ToStar(Point P_pt_Center, Point P_pt_Screen)
 {
@@ -70,6 +70,7 @@ CStarsWnd::CStarsWnd(JStd::GL::PGlWnd P_pWnd)
 
 	m_pWnd->GetMainDC().Select(GetStockObject(SYSTEM_FONT));
 	wglUseFontBitmaps(m_pWnd->GetMainDC().H(), 0, 255, 1000);
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL); // Render thread needs more priority
 }
 
 CStarsWnd::~CStarsWnd()
@@ -185,8 +186,8 @@ void CStarsWnd::RenderPuller()
 
 void CStarsWnd::RenderText()
 {
-	glListBase(1000);
 	glPushMatrix();
+	glListBase(1000);
 	glCallLists(24, GL_UNSIGNED_BYTE, "Hello Windows OpenGL World");
 	glPopMatrix();
 }
@@ -269,7 +270,7 @@ void CStarsWnd::AsyncRun(JStd::Threading::CMsgThread* ptd, size_t starBegin, siz
 		{
 			std::wostringstream os;
 			os << L"Seconds: " << moveSeconds;
-//			MessageBox(NULL, os.str().c_str(), L"Timing", MB_ICONINFORMATION);
+			//MessageBox(NULL, os.str().c_str(), L"Timing", MB_ICONINFORMATION);
 		}
 		if(m_bDoRandomInit)
 		{
