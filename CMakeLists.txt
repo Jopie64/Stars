@@ -16,7 +16,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Set compiler flags and options. 
 # Here it is setting the Visual Studio warning level to 4
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+if (MSVC)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+elseif (CMAKE_COMPILER_IS_GNUCXX )
+    message("Using C++11 please!")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif(MSVC)
 
 add_definitions(-D_AFXDLL -DUNICODE -D_UNICODE)
 set(CMAKE_MFC_FLAG 2)
@@ -45,7 +50,7 @@ source_group("include" FILES ${STARS_SOURCES_H})
 source_group("src" FILES ${STARS_SOURCES_CPP})
 
 add_executable(Stars WIN32 ${STARS_SOURCES_CPP}
-						   ${STARS_SOURCES_H})
+                           ${STARS_SOURCES_H})
 
 add_precompiled_header(Stars pchheader.h FORCEINCLUDE pchheader.cpp)
 include_directories(jstd)

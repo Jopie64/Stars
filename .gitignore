@@ -6,4 +6,4 @@ Release/
 *.aps
 *.ncb
 *.user
-/_build
+/_build*
