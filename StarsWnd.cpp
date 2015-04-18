@@ -1,7 +1,6 @@
 // StarsWnd.cpp : implementation file
 //
 
-#include "stdafx.h"
 #include "Stars.h"
 #include "StarsWnd.h"
 #include "jstd/Threading.h"
